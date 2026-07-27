@@ -3,15 +3,15 @@ import { getDatabase, ref, set, get } from 'firebase/database';
 import { getFirestore, initializeFirestore, doc, setDoc, getDoc, setLogLevel, memoryLocalCache } from 'firebase/firestore';
 import { getAuth, signInAnonymously } from 'firebase/auth';
 
-export const firebaseConfig = {
-  apiKey: "AIzaSyCm9fMcbhiPwy7xmZCjO8V83uaZNScES64",
-  authDomain: "beatrice-os.firebaseapp.com",
-  databaseURL: "https://beatrice-os-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "beatrice-os",
-  storageBucket: "beatrice-os.firebasestorage.app",
-  messagingSenderId: "112636717363",
-  appId: "1:112636717363:web:202bf0eb68ed80acb93646",
-  measurementId: "G-Q82BHFCNZT"
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? '',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? '',
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL ?? '',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID ?? '',
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID ?? ''
 };
 
 // Initialize Firebase
@@ -22,16 +22,16 @@ export const db = getDatabase(app);
 try {
   setLogLevel('silent');
 } catch (_e) {
-  // Ignore
+   // Ignore
 }
 
 // Use initializeFirestore with long polling auto-detection and memory cache to handle offline or network restrictions gracefully
 export const firestore = getApps().length === 0 
-  ? initializeFirestore(app, {
+   ? initializeFirestore(app, {
       experimentalAutoDetectLongPolling: true,
       localCache: memoryLocalCache(),
-    })
-  : getFirestore(app);
+     })
+   : getFirestore(app);
 
 export const auth = getAuth(app);
 // Helper for Firestore operations with timeout to avoid hanging or noisy connection errors when Firestore backend is unavailable
@@ -40,12 +40,12 @@ async function withTimeout<T>(promise: Promise<T>, ms: number = 2500): Promise<T
   const timeoutPromise = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
       reject(new Error('Firestore operation timed out (backend unavailable)'));
-    }, ms);
-  });
+     }, ms);
+   });
 
   return Promise.race([promise, timeoutPromise]).finally(() => {
     clearTimeout(timer);
-  });
+   });
 }
 
 const LOCAL_STORAGE_KEY = 'beatrice_settings_backup';
@@ -54,10 +54,10 @@ async function ensureAuth() {
   try {
     if (!auth.currentUser) {
       await signInAnonymously(auth);
-    }
-  } catch (err) {
+     }
+   } catch (err) {
     console.warn('Anonymous auth sign in attempt:', err);
-  }
+   }
 }
 
 export interface AppSettingsData {
@@ -73,41 +73,41 @@ export interface AppSettingsData {
 }
 
 export async function saveSettingsToFirebase(settingsData: AppSettingsData): Promise<{ remoteSaved: boolean; message: string }> {
-  // Always save to localStorage as local backup
+   // Always save to localStorage as local backup
   try {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settingsData));
-  } catch (err) {
+   } catch (err) {
     console.warn('Failed to save settings to localStorage:', err);
-  }
+   }
 
   await ensureAuth();
 
   let savedInAtLeastOne = false;
   let lastError: any = null;
 
-  // Try saving to Realtime Database
+   // Try saving to Realtime Database
   try {
     const settingsRef = ref(db, 'settings/current');
     await set(settingsRef, settingsData);
     savedInAtLeastOne = true;
-  } catch (err) {
+   } catch (err) {
     console.warn('Realtime Database save attempt:', err);
     lastError = err;
-  }
+   }
 
-  // Try saving to Firestore with timeout and silent error handling
+   // Try saving to Firestore with timeout and silent error handling
   try {
     const settingsDocRef = doc(firestore, 'settings', 'current');
     await withTimeout(setDoc(settingsDocRef, settingsData), 2000);
     savedInAtLeastOne = true;
-  } catch (err) {
+   } catch (err) {
     if (!lastError) lastError = err;
-  }
+   }
 
   if (savedInAtLeastOne) {
     return { remoteSaved: true, message: 'Settings saved to Firebase cloud & local backup!' };
-  } else {
-    // Graceful fallback when remote rules block writing
+   } else {
+     // Graceful fallback when remote rules block writing
     const isPermissionError =
       lastError?.code === 'PERMISSION_DENIED' ||
       lastError?.message?.includes('PERMISSION_DENIED') ||
@@ -117,47 +117,47 @@ export async function saveSettingsToFirebase(settingsData: AppSettingsData): Pro
       return {
         remoteSaved: false,
         message: 'Saved locally. (Firebase rules restricted cloud write)',
-      };
-    }
+       };
+     }
 
     throw lastError || new Error('Failed to save settings to Firebase');
-  }
+   }
 }
 
 export async function loadSettingsFromFirebase(): Promise<AppSettingsData | null> {
   await ensureAuth();
 
-  // Try Realtime Database first
+   // Try Realtime Database first
   try {
     const settingsRef = ref(db, 'settings/current');
     const snapshot = await get(settingsRef);
     if (snapshot.exists()) {
       return snapshot.val() as AppSettingsData;
-    }
-  } catch (err) {
+     }
+   } catch (err) {
     console.warn('Realtime Database fetch attempt:', err);
-  }
+   }
 
-  // Try Firestore next
+   // Try Firestore next
   try {
     const settingsDocRef = doc(firestore, 'settings', 'current');
     const docSnap = await withTimeout(getDoc(settingsDocRef), 2000);
     if (docSnap.exists()) {
       return docSnap.data() as AppSettingsData;
-    }
-  } catch (_err) {
-    // Ignore Firestore offline / unavailable errors cleanly
-  }
+     }
+   } catch (_err) {
+     // Ignore Firestore offline / unavailable errors cleanly
+   }
 
-  // Fallback to localStorage backup
+   // Fallback to localStorage backup
   try {
     const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (localData) {
       return JSON.parse(localData) as AppSettingsData;
-    }
-  } catch (err) {
+     }
+   } catch (err) {
     console.warn('Failed to load from localStorage:', err);
-  }
+   }
 
   return null;
 }
@@ -171,41 +171,41 @@ export interface SavedTurn {
 const CONVERSATION_STORAGE_KEY = 'beatrice_conversation_memory';
 
 export async function saveConversationToFirebase(turns: SavedTurn[]): Promise<void> {
-  // Always update local storage backup
+   // Always update local storage backup
   try {
     localStorage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify(turns));
-  } catch (err) {
+   } catch (err) {
     console.warn('Failed to save conversation memory locally:', err);
-  }
+   }
 
   await ensureAuth();
 
   const memoryPayload = {
     turns,
     lastUpdated: new Date().toISOString(),
-  };
+   };
 
-  // Try RTDB
+   // Try RTDB
   try {
     const memoryRef = ref(db, 'memory/conversation');
     await set(memoryRef, memoryPayload);
-  } catch (err) {
+   } catch (err) {
     console.warn('RTDB conversation memory save attempt:', err);
-  }
+   }
 
-  // Try Firestore with timeout
+   // Try Firestore with timeout
   try {
     const memoryDocRef = doc(firestore, 'memory', 'conversation');
     await withTimeout(setDoc(memoryDocRef, memoryPayload), 2000);
-  } catch (_err) {
-    // Ignore Firestore unavailable errors
-  }
+   } catch (_err) {
+     // Ignore Firestore unavailable errors
+   }
 }
 
 export async function loadConversationFromFirebase(): Promise<SavedTurn[]> {
   await ensureAuth();
 
-  // Try RTDB
+   // Try RTDB
   try {
     const memoryRef = ref(db, 'memory/conversation');
     const snapshot = await get(memoryRef);
@@ -213,13 +213,13 @@ export async function loadConversationFromFirebase(): Promise<SavedTurn[]> {
       const data = snapshot.val();
       if (Array.isArray(data.turns)) {
         return data.turns;
-      }
-    }
-  } catch (_err) {
-    // Ignore RTDB errors
-  }
+       }
+     }
+   } catch (_err) {
+     // Ignore RTDB errors
+   }
 
-  // Try Firestore
+   // Try Firestore
   try {
     const memoryDocRef = doc(firestore, 'memory', 'conversation');
     const docSnap = await withTimeout(getDoc(memoryDocRef), 2000);
@@ -227,22 +227,21 @@ export async function loadConversationFromFirebase(): Promise<SavedTurn[]> {
       const data = docSnap.data();
       if (Array.isArray(data.turns)) {
         return data.turns;
-      }
-    }
-  } catch (_err) {
-    // Ignore Firestore errors
-  }
+       }
+     }
+   } catch (_err) {
+     // Ignore Firestore errors
+   }
 
-  // Local fallback
+   // Local fallback
   try {
     const localData = localStorage.getItem(CONVERSATION_STORAGE_KEY);
     if (localData) {
       return JSON.parse(localData);
-    }
-  } catch (err) {
+     }
+   } catch (err) {
     console.warn('Failed to load conversation memory from localStorage:', err);
-  }
+   }
 
   return [];
 }
-

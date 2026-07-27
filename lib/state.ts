@@ -97,10 +97,10 @@ export const useTools = create<{
   removeTool: (toolName: string) => void;
   updateTool: (oldName: string, updatedTool: FunctionCall) => void;
 }>(set => ({
-  tools: customerSupportTools,
+  tools: [],
   template: 'customer-support',
   setTemplate: (template: Template) => {
-    set({ tools: toolsets[template], template });
+    set({ template });
     useSettings.getState().setSystemPrompt(systemPrompts[template]);
   },
   setTools: (tools: FunctionCall[]) => set({ tools }),

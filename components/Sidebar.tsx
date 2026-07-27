@@ -265,6 +265,20 @@ export default function Sidebar() {
               </div>
             )}
           </div>
+
+          <div className="sidebar-section auth-section">
+            <button
+              onClick={() => {
+                useAuthStore.getState().setUser(null);
+                localStorage.removeItem('beatrice_auth');
+              }}
+              className="signout-button"
+              disabled={connected}
+            >
+              <span className="icon">🚪</span>
+              Sign Out
+            </button>
+          </div>
         </div>
       </aside>
       {editingTool && (

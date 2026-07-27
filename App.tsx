@@ -7,6 +7,8 @@ import { LiveAPIProvider, useLiveAPIContext } from './contexts/LiveAPIContext';
 import { useUI, useSettings, useTools, useLogStore, ConversationTurn } from './lib/state';
 import { Modality, LiveServerContent } from '@google/genai';
 import { loadConversationFromFirebase, saveConversationToFirebase, SavedTurn } from './lib/firebase';
+import { useAuthStore } from './lib/auth-store';
+import AuthProvider, { useAuth } from './components/auth/AuthProvider';
 
 import StatusBar from './components/StatusBar';
 import Header from './components/Header';
@@ -16,13 +18,17 @@ import ChatDrawer from './components/ChatDrawer';
 import VideoDrawer from './components/VideoDrawer';
 import Sidebar from './components/Sidebar';
 import ErrorScreen from './components/demo/ErrorScreen';
+import SplashScreen from './components/auth/SplashScreen';
+import AuthPage from './components/auth/AuthPage';
 
 const API_KEY = process.env.GEMINI_API_KEY as string;
 if (typeof API_KEY !== 'string') {
   throw new Error(
-    'Missing required environment variable: GEMINI_API_KEY'
-  );
+      'Missing required environment variable: GEMINI_API_KEY'
+    );
 }
+
+/* ───────── Main Content ───────── */
 
 function BeatriceContent() {
   const { client, setConfig } = useLiveAPIContext();
@@ -34,7 +40,7 @@ function BeatriceContent() {
   const [loadedMemoryTurns, setLoadedMemoryTurns] = useState<SavedTurn[]>([]);
   const turns = useLogStore(state => state.turns);
 
-  // Initial load of conversation history from Firebase
+     // Initial load of conversation history from Firebase
   useEffect(() => {
     let isMounted = true;
     async function initMemory() {
@@ -42,7 +48,6 @@ function BeatriceContent() {
         const savedHistory = await loadConversationFromFirebase();
         if (savedHistory.length > 0 && isMounted) {
           setLoadedMemoryTurns(savedHistory);
-          // Populate log store if empty so user can see past turns in ChatDrawer
           const currentTurns = useLogStore.getState().turns;
           if (currentTurns.length === 0) {
             savedHistory.forEach(st => {
@@ -50,21 +55,19 @@ function BeatriceContent() {
                 role: st.role,
                 text: st.text,
                 isFinal: true,
+                });
               });
-            });
+            }
           }
-        }
-      } catch (err) {
+        } catch (err) {
         console.warn('Memory load attempt notice:', err);
+        }
       }
-    }
     initMemory();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    return () => { isMounted = false; };
+    }, []);
 
-  // Save conversation turns to Firebase whenever turns are finalized or updated
+     // Save conversation turns to Firebase
   const saveTimeoutRef = useRef<any>(null);
   useEffect(() => {
     if (turns.length === 0) return;
@@ -75,40 +78,37 @@ function BeatriceContent() {
         role: t.role,
         text: t.text,
         timestamp: (t.timestamp || new Date()).toISOString(),
-      }));
+        }));
       saveConversationToFirebase(formatted).catch(err => {
         console.warn('Auto-save memory warning:', err);
-      });
-    }, 1500);
+        });
+      }, 1500);
 
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    };
-  }, [turns]);
+      };
+    }, [turns]);
 
-  // Set the configuration for the Live API, embedding long-term memory
+     // Set Live API config
   useEffect(() => {
     const enabledTools = tools
-      .filter(tool => tool.isEnabled)
-      .map(tool => ({
-        functionDeclarations: [
-          {
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.parameters,
-          },
-        ],
-      }));
+        .filter(tool => tool.isEnabled)
+        .map(tool => ({
+        functionDeclarations: [{
+          name: tool.name,
+          description: tool.description ?? '',
+          parameters: tool.parameters,
+          }],
+        }));
 
-    // Construct system prompt with language preference, nuance, names, and long term memory
     let effectiveSystemPrompt = systemPrompt;
     if (language) {
       effectiveSystemPrompt += `\n\n## LANGUAGE PREFERENCE\nAlways converse, understand, and respond in ${language}.`;
-    }
+      }
 
     if (nuance) {
-      effectiveSystemPrompt += `\n\n## ACTIVE REGISTER / NUANCE MODE: ${nuance}\nAdopt a ${nuance.toLowerCase()} conversational register in your vocal delivery while maintaining Beatrice's core natural speech behaviours and vocal nuances.`;
-    }
+      effectiveSystemPrompt += `\n\n## ACTIVE REGISTER / NUANCE MODE: ${nuance}\nAdopt a ${nuance.toLowerCase()} conversational register in your vocal delivery.`;
+      }
 
     const currentAgentName = agentName || 'Beatrice';
     const currentUserName = userName || 'Boss';
@@ -120,40 +120,24 @@ When a conversation session starts, you MUST IMMEDIATELY greet the user out loud
 Address the user as "${currentUserName}". Dynamically pick up on a topic, question, or detail from your past conversation memory with the user. 
 Vary your tone, greeting, and phrasing dynamically every session so it feels fresh, natural, and personable.`;
 
-    if (loadedMemoryTurns.length > 0) {
-      const memorySnippet = loadedMemoryTurns
-        .slice(-25)
-        .map(t => `${t.role === 'user' ? currentUserName : currentAgentName}: ${t.text}`)
-        .join('\n');
-
-      effectiveSystemPrompt += `\n\n## LONG-TERM CONVERSATION MEMORY (Past Interactions)\nYou remember the following conversation history with the user. Use this context naturally across sessions:\n${memorySnippet}`;
-    }
-
-    const config: any = {
-      responseModalities: [Modality.AUDIO],
-      speechConfig: {
-        voiceConfig: {
-          prebuiltVoiceConfig: {
-            voiceName: voice,
+    setConfig({
+      model: 'models/gemini-2.5-flash-native-audio-preview',
+      generationConfig: {
+        responseModalities: [Modality.AUDIO, Modality.TEXT],
+        speechConfig: {
+          voiceName: voice,
           },
         },
-      },
       inputAudioTranscription: {},
       outputAudioTranscription: {},
       systemInstruction: {
-        parts: [
-          {
-            text: effectiveSystemPrompt,
-          },
-        ],
-      },
+        parts: [{ text: effectiveSystemPrompt }],
+        },
       tools: enabledTools,
-    };
+      });
+    }, [setConfig, systemPrompt, tools, voice, language, nuance, userName, agentName]);
 
-    setConfig(config);
-  }, [setConfig, systemPrompt, tools, voice, language, nuance, userName, agentName, loadedMemoryTurns]);
-
-  // Bind event listeners for input/output transcriptions and content turns
+     // Bind event listeners
   useEffect(() => {
     const { addTurn, updateLastTurn } = useLogStore.getState();
 
@@ -161,34 +145,28 @@ Vary your tone, greeting, and phrasing dynamically every session so it feels fre
       const turns = useLogStore.getState().turns;
       const last = turns[turns.length - 1];
       if (last && last.role === 'user' && !last.isFinal) {
-        updateLastTurn({
-          text: last.text + text,
-          isFinal,
-        });
-      } else {
+        updateLastTurn({ text: last.text + text, isFinal });
+        } else {
         addTurn({ role: 'user', text, isFinal });
-      }
-    };
+        }
+      };
 
     const handleOutputTranscription = (text: string, isFinal: boolean) => {
       const turns = useLogStore.getState().turns;
       const last = turns[turns.length - 1];
       if (last && last.role === 'agent' && !last.isFinal) {
-        updateLastTurn({
-          text: last.text + text,
-          isFinal,
-        });
-      } else {
+        updateLastTurn({ text: last.text + text, isFinal });
+        } else {
         addTurn({ role: 'agent', text, isFinal });
-      }
-    };
+        }
+      };
 
     const handleContent = (serverContent: LiveServerContent) => {
       const text =
         serverContent.modelTurn?.parts
-          ?.map((p: any) => p.text)
-          .filter(Boolean)
-          .join(' ') ?? '';
+            ?.map((p: any) => p.text)
+            .filter(Boolean)
+            .join(' ') ?? '';
       const groundingChunks = serverContent.groundingMetadata?.groundingChunks;
 
       if (!text && !groundingChunks) return;
@@ -199,49 +177,38 @@ Vary your tone, greeting, and phrasing dynamically every session so it feels fre
       if (last?.role === 'agent' && !last.isFinal) {
         const updatedTurn: Partial<ConversationTurn> = {
           text: last.text + text,
-        };
+          };
         if (groundingChunks) {
-          updatedTurn.groundingChunks = [
-            ...(last.groundingChunks || []),
-            ...groundingChunks,
-          ];
-        }
+          updatedTurn.groundingChunks = [...(last.groundingChunks || []), ...groundingChunks];
+          }
         updateLastTurn(updatedTurn);
-      } else {
+        } else {
         addTurn({ role: 'agent', text, isFinal: false, groundingChunks });
-      }
-    };
-
-    const handleTurnComplete = () => {
-      const last = useLogStore.getState().turns.at(-1);
-      if (last && !last.isFinal) {
-        updateLastTurn({ isFinal: true });
-      }
-    };
+        }
+      };
 
     const handleOpen = () => {
-      // Small delay to allow session setup completion
       setTimeout(() => {
         const currentTurns = useLogStore.getState().turns;
         const memoryList = loadedMemoryTurns.length > 0 ? loadedMemoryTurns : currentTurns;
         const userEntries = memoryList.filter(
           t => t.role === 'user' && t.text && t.text.trim().length > 3
-        );
+          );
 
         let topicHint = '';
         if (userEntries.length > 0) {
           const randomEntry = userEntries[Math.floor(Math.random() * userEntries.length)];
           topicHint = ` For instance, you could follow up on or reference when they previously mentioned: "${randomEntry.text.slice(0, 120)}".`;
-        }
+          }
 
         const uName = userName || 'Boss';
         client.send([
-          {
+            {
             text: `[SYSTEM TRIGGER: SESSION CONNECTED] Proactively greet ${uName} out loud right now! Address them as "${uName}". Start the conversation naturally by picking up on a topic or detail from our past conversation history in a dynamic, engaging style.${topicHint} Do not sound robotic—be warm, natural, and personable!`,
-          },
-        ]);
-      }, 300);
-    };
+            },
+          ]);
+        }, 300);
+      };
 
     client.on('open', handleOpen);
     client.on('inputTranscription', handleInputTranscription);
@@ -255,34 +222,90 @@ Vary your tone, greeting, and phrasing dynamically every session so it feels fre
       client.off('outputTranscription', handleOutputTranscription);
       client.off('content', handleContent);
       client.off('turncomplete', handleTurnComplete);
-    };
-  }, [client, loadedMemoryTurns, userName]);
+      };
+    }, [client, loadedMemoryTurns, userName]);
+
+   function handleTurnComplete() {
+    const last = useLogStore.getState().turns.at(-1);
+    if (last && !last.isFinal) {
+      updateLastTurn({ isFinal: true });
+      }
+    }
 
   return (
-    <div className="app-viewport">
-      <div className="mobile-app">
-        <ErrorScreen />
-        <StatusBar />
-        <Header />
-        <MainVisual />
-        <BottomNav
-          isChatOpen={isChatOpen}
-          isVideoOpen={isVideoOpen}
-          onToggleChat={() => setIsChatOpen(!isChatOpen)}
-          onToggleVideo={() => setIsVideoOpen(!isVideoOpen)}
-        />
-        <ChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
-        <VideoDrawer isOpen={isVideoOpen} onClose={() => setIsVideoOpen(false)} />
-        <Sidebar />
-      </div>
-    </div>
-  );
+       <div className="app-viewport">
+         <div className="mobile-app">
+           <ErrorScreen />
+           <StatusBar />
+           <Header />
+           <MainVisual />
+           <BottomNav
+            isChatOpen={isChatOpen}
+            isVideoOpen={isVideoOpen}
+            onToggleChat={() => setIsChatOpen(!isChatOpen)}
+            onToggleVideo={() => setIsVideoOpen(!isVideoOpen)}
+           />
+           <ChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+           <VideoDrawer isOpen={isVideoOpen} onClose={() => setIsVideoOpen(false)} />
+           <Sidebar />
+         </div>
+       </div>
+     );
 }
+
+/* ───────── Auth Gate ───────── */
+
+function AuthGate() {
+  const isAuthenticated = useAuthStore(s => s.isAuthenticated);
+  const [splashReady, setSplashReady] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [, forceUpdate] = useState(0);
+
+     // Splash auto-transition after 2.5s
+  useEffect(() => {
+    if (!splashReady) return;
+    const timer = setTimeout(() => setShowAuth(true), 2000);
+    return () => clearTimeout(timer);
+    }, [splashReady]);
+
+     // Force re-render when auth state changes
+  useEffect(() => {
+    const unsub = useAuthStore.subscribe(() => {
+      forceUpdate(n => n + 1);
+      });
+    return unsub;
+    }, []);
+
+     // Splash screen — only for unauthenticated users who haven't seen auth
+  if (!isAuthenticated && !showAuth) {
+    return (
+        <SplashScreen onReady={() => setSplashReady(true)} />
+      );
+    }
+
+     // Auth page — shows splash has been seen, main app loads when authenticated
+  if (!isAuthenticated && showAuth) {
+    return (
+        <div className="auth-portal">
+          <AuthPage onAuthenticated={() => {}} />
+        </div>
+      );
+    }
+
+     // Main app — authenticated
+  return (
+       <LiveAPIProvider apiKey={API_KEY}>
+         <BeatriceContent />
+       </LiveAPIProvider>
+     );
+}
+
+/* ───────── App Root ───────── */
 
 export default function App() {
   return (
-    <LiveAPIProvider apiKey={API_KEY}>
-      <BeatriceContent />
-    </LiveAPIProvider>
-  );
+       <AuthProvider>
+         <AuthGate />
+       </AuthProvider>
+     );
 }

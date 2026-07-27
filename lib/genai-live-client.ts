@@ -110,9 +110,13 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
     try {
       this.session = await this.client.live.connect({
         model: this.model,
-        config: {
-          ...config,
-        },
+        generationConfig: config.generationConfig,
+        responseModalities: config.responseModalities,
+        speechConfig: config.speechConfig,
+        inputAudioTranscription: config.inputAudioTranscription,
+        outputAudioTranscription: config.outputAudioTranscription,
+        systemInstruction: config.systemInstruction,
+        tools: config.tools,
         callbacks,
       });
     } catch (e: any) {
