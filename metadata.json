@@ -1,0 +1,12 @@
+{
+  "name": "Beatrice - Eburon AI",
+  "description": "Beatrice voice assistant interface powered by Eburon AI and Gemini Live API.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera",
+    "display-capture"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
