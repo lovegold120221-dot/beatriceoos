@@ -186,10 +186,10 @@ class PocketStrikeBridge {
   }
 
   async executeTermuxCommand(cmd: string): Promise<PocketStrikeResult> {
-    const blockedPatterns = [
+const blockedPatterns = [
       /rm\s+-rf\s+\//,
       /mkfs/,
-      /dd\s+if=/dev/,
+      /dd\s+if=.*\/dev/,
       /shutdown/,
       /reboot/,
       /wipe/,

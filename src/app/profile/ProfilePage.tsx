@@ -7,7 +7,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { Link } from 'react-router-dom';
 
 export default function ProfilePage() {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
 
   if (!currentUser) {
     return (
@@ -52,9 +52,14 @@ export default function ProfilePage() {
       </div>
 
       <div className="profile-actions">
-        <Link to="/account/settings" className="btn btn-primary">
-          Account Settings
-        </Link>
+        <button
+          className="btn btn-primary"
+          onClick={async () => {
+            await logout();
+          }}
+        >
+          Sign Out
+        </button>
         <Link to="/history" className="btn">
           View History
         </Link>
