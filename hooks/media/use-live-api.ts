@@ -25,6 +25,7 @@ import { AudioStreamer } from '../../lib/audio-streamer';
 import { audioContext } from '../../lib/utils';
 import VolMeterWorket from '../../lib/worklets/vol-meter';
 import { useLogStore, useSettings } from '@/lib/state';
+import { executeWithProgress } from '../../lib/tools/device-control';
 
 export type UseLiveApiResults = {
   client: GenAILiveClient;
@@ -77,7 +78,6 @@ export function useLiveApi({
           .catch(err => {
             console.error('Error adding worklet:', err);
           });
-      });
     }
   }, [audioStreamerRef]);
 
@@ -109,10 +109,10 @@ export function useLiveApi({
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('visibilityChange', handleVisibilityChange);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('visibilityChange', handleVisibilityChange);
       if (wakeLock) {
         wakeLock.release().catch(() => {});
       }
@@ -146,35 +146,51 @@ export function useLiveApi({
     client.on('interrupted', stopAudioStreamer);
     client.on('audio', onAudio);
 
-    const onToolCall = (toolCall: LiveServerToolCall) => {
+    const onToolCall = async (toolCall: LiveServerToolCall) => {
       const functionResponses: any[] = [];
 
       for (const fc of toolCall.functionCalls) {
         // Log the function call trigger
-        const triggerMessage = `Triggering function call: **${
-          fc.name
-        }**\n\`\`\`json\n${JSON.stringify(fc.args, null, 2)}\n\`\`\``;
+        const triggerMessage = ;
         useLogStore.getState().addTurn({
           role: 'system',
           text: triggerMessage,
           isFinal: true,
         });
 
-        // Prepare the response
-        functionResponses.push({
-          id: fc.id,
-          name: fc.name,
-          response: { result: 'ok' }, // simple, hard-coded function response
-        });
+        if (fc.name === 'mobile_use') {
+          const { success, result, error } = await executeWithProgress(
+            'mobile_use',
+            fc.args as Record<string, unknown>,
+            
+          );
+
+          if (success) {
+            functionResponses.push({
+              id: fc.id,
+              name: fc.name,
+              response: { result: result },
+            });
+          } else {
+            functionResponses.push({
+              id: fc.id,
+              name: fc.name,
+              response: { error: error || 'Unknown error during mobile execution' },
+            });
+          }
+        } else {
+          // Default behavior for other tools
+          functionResponses.push({
+            id: fc.id,
+            name: fc.name,
+            response: { result: 'ok' }, // simple, hard-coded function response
+          });
+        }
       }
 
       // Log the function call response
       if (functionResponses.length > 0) {
-        const responseMessage = `Function call response:\n\`\`\`json\n${JSON.stringify(
-          functionResponses,
-          null,
-          2,
-        )}\n\`\`\``;
+        const responseMessage = ;
         useLogStore.getState().addTurn({
           role: 'system',
           text: responseMessage,

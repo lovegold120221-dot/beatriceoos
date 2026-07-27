@@ -12,7 +12,7 @@ function ensureBridgeConnected(): Promise<boolean> {
   return bridge.connect();
 }
 
-async function executeWithProgress(
+export async function executeWithProgress(
   action: string,
   request: Record<string, unknown>,
   progressMessage: string
@@ -113,7 +113,7 @@ export const deviceControlTools: FunctionCall[] = [
     parameters: {
       type: 'OBJECT',
       properties: {
-        packageName: { type: 'STRING', description: 'The package name of the app to launch.' },
+        packageName: { type: 'STRING', description: 'The package or app name to launch.' },
       },
       required: ['packageName'],
     },
@@ -257,6 +257,22 @@ export const deviceControlTools: FunctionCall[] = [
     parameters: {
       type: 'OBJECT',
       properties: {},
+    },
+    isEnabled: true,
+    scheduling: FunctionResponseScheduling.INTERRUPT,
+  },
+  {
+    name: 'mobile_use',
+    description: 'Use the PocketStrike-AI mobile use agent to perform complex tasks on the authorized mobile device.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        instruction: {
+          type: 'STRING',
+          description: 'The natural language instruction for the mobile agent to execute.',
+        },
+      },
+      required: ['instruction'],
     },
     isEnabled: true,
     scheduling: FunctionResponseScheduling.INTERRUPT,
