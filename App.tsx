@@ -8,6 +8,7 @@ import { useUI, useSettings, useTools, useLogStore, ConversationTurn } from './l
 import { Modality, LiveServerContent } from '@google/genai';
 import { loadConversationFromFirebase, saveConversationToFirebase, SavedTurn } from './lib/firebase';
 import { useAuthStore } from './lib/auth-store';
+import { deviceControlTools } from './lib/tools/device-control';
 import AuthProvider, { useAuth } from './components/auth/AuthProvider';
 
 import StatusBar from './components/StatusBar';
@@ -100,14 +101,20 @@ function BeatriceContent() {
           parameters: tool.parameters,
           }],
         }));
+let effectiveSystemPrompt = systemPrompt;
 
-    let effectiveSystemPrompt = systemPrompt;
     if (language) {
       effectiveSystemPrompt += `\n\n## LANGUAGE PREFERENCE\nAlways converse, understand, and respond in ${language}.`;
       }
 
     if (nuance) {
       effectiveSystemPrompt += `\n\n## ACTIVE REGISTER / NUANCE MODE: ${nuance}\nAdopt a ${nuance.toLowerCase()} conversational register in your vocal delivery.`;
+      }
+
+    const hasDeviceControlTools = tools.some(t => t.name.startsWith('device_') && t.isEnabled);
+
+    if (hasDeviceControlTools) {
+      effectiveSystemPrompt += `\n\n## DEVICE CONTROL CAPABILITIES\nYou have access to the PocketStrike device-control layer. When a request requires operating the user's mobile device, convert the request into a clear executable task and delegate it internally to the integrated device-control agent. After executing a device action, verify the result before confirming completion to the user. Never create or launch PocketStrike as a separate application; it operates entirely as Beatrice's hidden internal device-execution capability.`;
       }
 
     const currentAgentName = agentName || 'Beatrice';

@@ -35,6 +35,18 @@ const welcomeContent: Record<Template, { title: string; description: string; pro
       "What's the traffic like on the way to the airport?",
     ],
   },
+  'device-control': {
+    title: 'Device Control',
+    description: 'Control your mobile device, inspect screens, navigate apps, and execute device actions.',
+    prompts: [
+      'Open the settings app on my phone.',
+      'Swipe down to see notifications.',
+      'Take a screenshot of my current screen.',
+      'Find my phone and tap on it.',
+      'Increase the screen brightness.',
+      'List my installed apps.',
+    ],
+  },
 };
 
 const WelcomeScreen: React.FC = () => {

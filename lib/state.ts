@@ -1,24 +1,27 @@
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
+ */
 import { create } from 'zustand';
 import { customerSupportTools } from './tools/customer-support';
 import { personalAssistantTools } from './tools/personal-assistant';
 import { navigationSystemTools } from './tools/navigation-system';
+import { deviceControlTools } from './tools/device-control';
 
-export type Template = 'customer-support' | 'personal-assistant' | 'navigation-system';
+export type Template = 'customer-support' | 'personal-assistant' | 'navigation-system' | 'device-control';
 
 const toolsets: Record<Template, FunctionCall[]> = {
   'customer-support': customerSupportTools,
   'personal-assistant': personalAssistantTools,
   'navigation-system': navigationSystemTools,
+  'device-control': deviceControlTools,
 };
 
 const systemPrompts: Record<Template, string> = {
   'customer-support': 'You are a helpful and friendly customer support agent. Be conversational and concise.',
   'personal-assistant': 'You are a helpful and friendly personal assistant. Be proactive and efficient.',
   'navigation-system': 'You are a helpful and friendly navigation assistant. Provide clear and accurate directions.',
+  'device-control': "You are Beatrice's internal device-control agent. You operate the authorised mobile device on the user's behalf. When the user asks you to interact with their phone, you must execute the appropriate device action and verify the result before reporting back to Beatrice. Only confirm completion after verifying the action succeeded on the device.",
 };
 import { DEFAULT_LIVE_API_MODEL, DEFAULT_VOICE, DEFAULT_LANGUAGE, DEFAULT_NUANCE, DEFAULT_USER_NAME, DEFAULT_AGENT_NAME } from './constants';
 import { DEFAULT_SYSTEM_PROMPT } from './prompts';
