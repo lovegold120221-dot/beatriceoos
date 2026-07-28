@@ -896,6 +896,169 @@ html, body {
     margin-top: 8px;
 }
 
+/* ─── Device Control Settings ─── */
+.device-control-section {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.device-control-section .sidebar-section-title {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: #46bec3;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.device-setting-group {
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.device-setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.device-toggle-label {
+    font-size: 12px !important;
+    color: #cccccc !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    flex-direction: row !important;
+    gap: 0 !important;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 22px;
+    cursor: pointer;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 22px;
+    transition: all 0.25s ease;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    transition: transform 0.25s ease;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: linear-gradient(135deg, #a4e776 0%, #46bec3 100%);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(16px);
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.device-connection-status {
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ps-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.ps-status-dot.connected {
+    background: #a4e776;
+    box-shadow: 0 0 8px rgba(164, 231, 118, 0.5);
+    animation: pulse-dot 2s infinite ease-in-out;
+}
+
+.ps-status-dot.disconnected {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.3); }
+}
+
+.ps-test-button {
+    padding: 5px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+    color: #cccccc;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.ps-test-button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+.ps-test-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.device-connection-note {
+    line-height: 1.5;
+}
+
+.device-connection-note ul {
+    list-style: none;
+}
+
+.device-connection-note li {
+    position: relative;
+    padding-left: 12px;
+    margin-bottom: 2px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.device-connection-note li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #46bec3;
+}
+
 /* Firebase Save Settings Button & Status */
 .firebase-section {
     margin-top: 16px;

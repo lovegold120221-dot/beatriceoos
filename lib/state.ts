@@ -67,6 +67,53 @@ export const useSettings = create<{
 }));
 
 /**
+ * Device Control Settings
+ */
+export const useDeviceControl = create<{
+  pocketStrikeUrl: string;
+  pocketStrikeConnected: boolean;
+  adbEnabled: boolean;
+  adbRootEnabled: boolean;
+  adbTcpIpEnabled: boolean;
+  adbTcpIpAddress: string;
+  adbTcpIpPort: string;
+  shizukuEnabled: boolean;
+  accessibilityServiceEnabled: boolean;
+  workspacePath: string;
+  setPocketStrikeUrl: (url: string) => void;
+  setPocketStrikeConnected: (connected: boolean) => void;
+  setAdbEnabled: (enabled: boolean) => void;
+  setAdbRootEnabled: (enabled: boolean) => void;
+  setAdbTcpIpEnabled: (enabled: boolean) => void;
+  setAdbTcpIpAddress: (address: string) => void;
+  setAdbTcpIpPort: (port: string) => void;
+  setShizukuEnabled: (enabled: boolean) => void;
+  setAccessibilityServiceEnabled: (enabled: boolean) => void;
+  setWorkspacePath: (path: string) => void;
+}>(set => ({
+  pocketStrikeUrl: 'http://localhost:5000',
+  pocketStrikeConnected: false,
+  adbEnabled: true,
+  adbRootEnabled: false,
+  adbTcpIpEnabled: false,
+  adbTcpIpAddress: '',
+  adbTcpIpPort: '5555',
+  shizukuEnabled: false,
+  accessibilityServiceEnabled: false,
+  workspacePath: '/storage/shared/PocketStrike-AI',
+  setPocketStrikeUrl: url => set({ pocketStrikeUrl: url }),
+  setPocketStrikeConnected: connected => set({ pocketStrikeConnected: connected }),
+  setAdbEnabled: enabled => set({ adbEnabled: enabled }),
+  setAdbRootEnabled: enabled => set({ adbRootEnabled: enabled }),
+  setAdbTcpIpEnabled: enabled => set({ adbTcpIpEnabled: enabled }),
+  setAdbTcpIpAddress: address => set({ adbTcpIpAddress: address }),
+  setAdbTcpIpPort: port => set({ adbTcpIpPort: port }),
+  setShizukuEnabled: enabled => set({ shizukuEnabled: enabled }),
+  setAccessibilityServiceEnabled: enabled => set({ accessibilityServiceEnabled: enabled }),
+  setWorkspacePath: path => set({ workspacePath: path }),
+}));
+
+/**
  * UI
  */
 export const useUI = create<{

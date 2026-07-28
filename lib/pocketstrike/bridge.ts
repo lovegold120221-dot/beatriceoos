@@ -4,8 +4,6 @@
  */
 import { DeviceAction, DeviceRequest } from './types';
 
-const WORKSPACE_BASE = '/storage/shared/PocketStrike-AI';
-
 interface PocketStrikeStatus {
   connected: boolean;
   deviceId: string | null;
@@ -24,9 +22,26 @@ class PocketStrikeBridge {
   private baseUrl: string;
   private connected: boolean = false;
   private deviceInfo: PocketStrikeStatus | null = null;
+  private workspacePath: string = '/storage/shared/PocketStrike-AI';
 
   constructor(baseUrl?: string) {
     this.baseUrl = baseUrl || 'http://localhost:5000';
+  }
+
+  setBaseUrl(url: string): void {
+    this.baseUrl = url;
+  }
+
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  setWorkspacePath(path: string): void {
+    this.workspacePath = path?.trim() || '/storage/shared/PocketStrike-AI';
+  }
+
+  getWorkspacePath(): string {
+    return this.workspacePath;
   }
 
   async connect(): Promise<boolean> {
@@ -95,7 +110,11 @@ class PocketStrikeBridge {
       const response = await fetch(`${this.baseUrl}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, request }),
+        body: JSON.stringify({
+          action,
+          request,
+          workspacePath: this.workspacePath,
+        }),
         signal: AbortSignal.timeout(30000),
       });
 
