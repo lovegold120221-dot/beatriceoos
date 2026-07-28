@@ -12,7 +12,7 @@ import '../../core/logger.dart';
 class GeminiService {
   GenerativeModel? _model;
   ChatSession? _chat;
-  String _modelName = 'models/gemini-2.5-flash-native-audio-preview';
+  String _modelName = 'models/gemini-2.5-flash-native-audio-preview-12-2025';
   bool _connected = false;
 
   bool get isConnected => _connected;
@@ -30,13 +30,21 @@ class GeminiService {
       _model = GenerativeModel(
         model: _modelName,
         apiKey: apiKey,
-        systemInstruction: Content.text((config['systemInstruction'] as String?) ?? ''),
+        systemInstruction: Content.text(
+          (config['systemInstruction'] as String?) ?? '',
+        ),
         generationConfig: GenerationConfig(responseMimeType: 'text/plain'),
         safetySettings: [
           SafetySetting(HarmCategory.harassment, HarmBlockThreshold.medium),
           SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.medium),
-          SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.medium),
-          SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.medium),
+          SafetySetting(
+            HarmCategory.sexuallyExplicit,
+            HarmBlockThreshold.medium,
+          ),
+          SafetySetting(
+            HarmCategory.dangerousContent,
+            HarmBlockThreshold.medium,
+          ),
         ],
       );
 

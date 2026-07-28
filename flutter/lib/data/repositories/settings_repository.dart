@@ -161,19 +161,23 @@ class AiEngineSettings {
 /// User-configurable device-control bridge state.
 class DeviceControlSettings {
   final String mobileUseUrl;
-  final String opencodeUrl;
   final String workspacePath;
   final bool adbEnabled;
   final bool adbRootEnabled;
+  final bool adbTcpIpEnabled;
+  final String adbTcpIpAddress;
+  final String adbTcpIpPort;
   final bool shizukuEnabled;
   final bool accessibilityServiceEnabled;
 
   const DeviceControlSettings({
     this.mobileUseUrl = 'http://localhost:5000',
-    this.opencodeUrl = 'http://localhost:5001',
     this.workspacePath = '/storage/shared/MobileUse-Agent',
     this.adbEnabled = true,
     this.adbRootEnabled = false,
+    this.adbTcpIpEnabled = false,
+    this.adbTcpIpAddress = '',
+    this.adbTcpIpPort = '5555',
     this.shizukuEnabled = false,
     this.accessibilityServiceEnabled = false,
   });
@@ -181,39 +185,47 @@ class DeviceControlSettings {
   factory DeviceControlSettings.fromJson(Map<String, dynamic> json) =>
       DeviceControlSettings(
         mobileUseUrl: (json['mobileUseUrl'] as String?) ?? 'http://localhost:5000',
-        opencodeUrl: (json['opencodeUrl'] as String?) ?? 'http://localhost:5001',
         workspacePath: (json['workspacePath'] as String?) ?? '/storage/shared/MobileUse-Agent',
         adbEnabled: (json['adbEnabled'] as bool?) ?? true,
         adbRootEnabled: (json['adbRootEnabled'] as bool?) ?? false,
+        adbTcpIpEnabled: (json['adbTcpIpEnabled'] as bool?) ?? false,
+        adbTcpIpAddress: (json['adbTcpIpAddress'] as String?) ?? '',
+        adbTcpIpPort: (json['adbTcpIpPort'] as String?) ?? '5555',
         shizukuEnabled: (json['shizukuEnabled'] as bool?) ?? false,
         accessibilityServiceEnabled: (json['accessibilityServiceEnabled'] as bool?) ?? false,
       );
 
   Map<String, dynamic> toJson() => {
         'mobileUseUrl': mobileUseUrl,
-        'opencodeUrl': opencodeUrl,
         'workspacePath': workspacePath,
         'adbEnabled': adbEnabled,
         'adbRootEnabled': adbRootEnabled,
+        'adbTcpIpEnabled': adbTcpIpEnabled,
+        'adbTcpIpAddress': adbTcpIpAddress,
+        'adbTcpIpPort': adbTcpIpPort,
         'shizukuEnabled': shizukuEnabled,
         'accessibilityServiceEnabled': accessibilityServiceEnabled,
       };
 
   DeviceControlSettings copyWith({
     String? mobileUseUrl,
-    String? opencodeUrl,
     String? workspacePath,
     bool? adbEnabled,
     bool? adbRootEnabled,
+    bool? adbTcpIpEnabled,
+    String? adbTcpIpAddress,
+    String? adbTcpIpPort,
     bool? shizukuEnabled,
     bool? accessibilityServiceEnabled,
   }) =>
       DeviceControlSettings(
         mobileUseUrl: mobileUseUrl ?? this.mobileUseUrl,
-        opencodeUrl: opencodeUrl ?? this.opencodeUrl,
         workspacePath: workspacePath ?? this.workspacePath,
         adbEnabled: adbEnabled ?? this.adbEnabled,
         adbRootEnabled: adbRootEnabled ?? this.adbRootEnabled,
+        adbTcpIpEnabled: adbTcpIpEnabled ?? this.adbTcpIpEnabled,
+        adbTcpIpAddress: adbTcpIpAddress ?? this.adbTcpIpAddress,
+        adbTcpIpPort: adbTcpIpPort ?? this.adbTcpIpPort,
         shizukuEnabled: shizukuEnabled ?? this.shizukuEnabled,
         accessibilityServiceEnabled:
             accessibilityServiceEnabled ?? this.accessibilityServiceEnabled,

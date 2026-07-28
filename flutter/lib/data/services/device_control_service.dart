@@ -3,6 +3,24 @@ import '../../core/logger.dart';
 import '../../core/network/api_client.dart';
 import '../repositories/settings_repository.dart';
 
+/// Diagnostic result from probing the server port.
+/// Mirrors the web app's PortDiagnostic interface.
+class ConnectionDiagnostic {
+  final bool reachable;
+  final int? statusCode;
+  final String? serviceName;
+  final String? errorType; // 'port_conflict' | 'unreachable' | 'bad_response' | 'ok'
+  final String detail;
+
+  const ConnectionDiagnostic({
+    required this.reachable,
+    this.statusCode,
+    this.serviceName,
+    this.errorType,
+    required this.detail,
+  });
+}
+
 /// HTTP bridge to the local MobileUse device-control server.
 ///
 /// Now routes through the shared [ApiClient] (dio) so every call gets
@@ -10,13 +28,11 @@ import '../repositories/settings_repository.dart';
 /// centralized logging — instead of a new `dart:io HttpClient` per call with
 /// no timeout and silently-swallowed errors.
 class DeviceControlService {
-  DeviceControlService(this._api, {String baseUrl = 'http://localhost:5000', String opencodeUrl = 'http://localhost:5001'})
-      : _baseUrl = baseUrl,
-        _opencodeUrl = opencodeUrl;
+  DeviceControlService(this._api, {String baseUrl = 'http://localhost:5000'})
+      : _baseUrl = baseUrl;
 
   final ApiClient _api;
   String _baseUrl;
-  String _opencodeUrl;
   bool _connected = false;
   bool _adbEnabled = true;
   bool _adbRootEnabled = false;
@@ -29,7 +45,6 @@ class DeviceControlService {
 
   bool get isConnected => _connected;
   String get baseUrl => _baseUrl;
-  String get opencodeUrl => _opencodeUrl;
   bool get adbEnabled => _adbEnabled;
   bool get adbRootEnabled => _adbRootEnabled;
   bool get adbTcpIpEnabled => _adbTcpIpEnabled;
@@ -40,7 +55,6 @@ class DeviceControlService {
   String get workspacePath => _workspacePath;
 
   void setBaseUrl(String url) => _baseUrl = url;
-  void setOpencodeUrl(String url) => _opencodeUrl = url;
   void setAdbEnabled(bool v) => _adbEnabled = v;
   void setAdbRootEnabled(bool v) => _adbRootEnabled = v;
   void setAdbTcpIpEnabled(bool v) => _adbTcpIpEnabled = v;
@@ -53,17 +67,18 @@ class DeviceControlService {
   /// Apply persisted device-control settings.
   void applySettings(DeviceControlSettings settings) {
     _baseUrl = settings.mobileUseUrl;
-    _opencodeUrl = settings.opencodeUrl;
     _workspacePath = settings.workspacePath;
     _adbEnabled = settings.adbEnabled;
     _adbRootEnabled = settings.adbRootEnabled;
+    _adbTcpIpEnabled = settings.adbTcpIpEnabled;
+    _adbTcpIpAddress = settings.adbTcpIpAddress;
+    _adbTcpIpPort = settings.adbTcpIpPort;
     _shizukuEnabled = settings.shizukuEnabled;
     _accessibilityEnabled = settings.accessibilityServiceEnabled;
   }
 
   Map<String, dynamic> toJson() => {
         'baseUrl': _baseUrl,
-        'opencodeUrl': _opencodeUrl,
         'adbEnabled': _adbEnabled,
         'adbRootEnabled': _adbRootEnabled,
         'adbTcpIpEnabled': _adbTcpIpEnabled,
@@ -148,8 +163,54 @@ class DeviceControlService {
 
   Future<Map<String, dynamic>> getScreenSize() => executeAction('get_screen_size', {});
 
+
+
+  /// Probe the server port and detect what's running.
+  ///
+  /// Distinguishes between:
+  /// - MobileUse-Agent healthy (ok)
+  /// - Another service on the port (port_conflict)
+  /// - Nothing reachable (unreachable)
+  Future<ConnectionDiagnostic> diagnoseConnection() async {
+    try {
+      final response = await _api.get<Map<String, dynamic>>(
+        '$_baseUrl/health',
+      );
+
+      final code = response.statusCode;
+
+      if (code == 200) {
+        return const ConnectionDiagnostic(
+          reachable: true,
+          statusCode: 200,
+          serviceName: 'MobileUse-Agent',
+          errorType: 'ok',
+          detail: 'MobileUse-Agent is running and healthy.',
+        );
+      }
+
+      // Server responded but with an error — likely another service.
+      return ConnectionDiagnostic(
+        reachable: true,
+        statusCode: code,
+        serviceName: 'Unknown web server',
+        errorType: 'port_conflict',
+        detail: code != null
+            ? 'Port ${_baseUrl.replaceAll(RegExp(r'^.*:'), '')} is in use by another service (HTTP $code).'
+            : 'Server responded but status could not be determined.',
+      );
+    } catch (e) {
+      return ConnectionDiagnostic(
+        reachable: false,
+        statusCode: null,
+        serviceName: null,
+        errorType: 'unreachable',
+        detail: 'Cannot reach $_baseUrl. Make sure MobileUse-Agent is running on your device and the port is forwarded (adb reverse tcp:5000 tcp:5000).',
+      );
+    }
+  }
+
   /// Execute a raw action on the device control server.
-  /// Public so [task_router.dart] and other services can access it.
   Future<Map<String, dynamic>> executeAction(String action, Map<String, dynamic> request) async {
     if (!_connected) {
       return {'success': false, 'error': 'Device control bridge is not connected'};

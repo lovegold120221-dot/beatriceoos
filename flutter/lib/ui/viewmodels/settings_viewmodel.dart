@@ -203,6 +203,54 @@ class SettingsViewModel extends ChangeNotifier {
     }
   }
 
+  /// Add a new empty tool.
+  void addTool() {
+    String newName = 'new_function';
+    int counter = 1;
+    while (_tools.any((t) => t.name == newName)) {
+      newName = 'new_function_$counter';
+      counter++;
+    }
+    _tools.add(FunctionCall(
+      name: newName,
+      isEnabled: true,
+      description: '',
+      parameters: const <String, dynamic>{
+        'type': 'OBJECT',
+        'properties': <String, dynamic>{},
+      },
+    ));
+    notifyListeners();
+  }
+
+  /// Remove a tool by name.
+  void removeTool(String toolName) {
+    _tools.removeWhere((t) => t.name == toolName);
+    notifyListeners();
+  }
+
+  /// Edit a tool's name (prompts the UI to show a rename dialog).
+  /// Returns the current tool so the UI can show an edit dialog.
+  FunctionCall? getTool(String toolName) {
+    final index = _tools.indexWhere((t) => t.name == toolName);
+    if (index != -1) return _tools[index];
+    return null;
+  }
+
+  /// Update a tool's properties after editing.
+  void updateTool(String oldName, FunctionCall updated) {
+    final index = _tools.indexWhere((t) => t.name == oldName);
+    if (index != -1) {
+      // Check for name collisions if the name was changed.
+      if (oldName != updated.name &&
+          _tools.any((t) => t.name == updated.name)) {
+        return; // Prevent duplicate names silently.
+      }
+      _tools[index] = updated;
+      notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
     _saveResetTimer?.cancel();

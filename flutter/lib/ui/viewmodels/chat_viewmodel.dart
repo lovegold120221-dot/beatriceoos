@@ -4,15 +4,26 @@ import '../../core/constants.dart';
 import '../../core/logger.dart';
 import '../../data/models/conversation_turn.dart';
 import '../../data/services/gemini_service.dart';
+import '../../domain/private_agent/classifier.dart';
+import '../../domain/private_agent/orchestrator.dart';
+import '../../domain/private_agent/response_formatter.dart';
+import '../../domain/private_agent/task_builder.dart';
+import '../../domain/private_agent/types.dart';
 import 'auth_viewmodel.dart';
 import 'settings_viewmodel.dart';
 
 class ChatViewModel extends ChangeNotifier {
-  ChatViewModel(this._authViewModel, this._settingsViewModel, this._geminiService);
+  ChatViewModel(this._authViewModel, this._settingsViewModel,
+      this._geminiService, this._mobileUseAgent);
 
   final AuthViewModel _authViewModel;
   final SettingsViewModel _settingsViewModel;
   final GeminiService _geminiService;
+  final MobileUseAgent _mobileUseAgent;
+
+  static const _classifier = RequestClassifier();
+  static const _taskBuilder = TaskBuilder();
+  static const _responseFormatter = ResponseFormatter();
 
   final List<ConversationTurn> _turns = [];
   bool _isConnected = false;
@@ -20,6 +31,7 @@ class ChatViewModel extends ChangeNotifier {
   bool _isSending = false;
   bool _isListening = false;
   double _volume = 0.0;
+  double _inVolume = 0.0;
   bool _isSpeechDetected = false;
   int _vadProbability = 0;
   String? _errorMessage;
@@ -30,6 +42,7 @@ class ChatViewModel extends ChangeNotifier {
   bool get isSending => _isSending;
   bool get isListening => _isListening;
   double get volume => _volume;
+  double get inVolume => _inVolume;
   bool get isSpeechDetected => _isSpeechDetected;
   int get vadProbability => _vadProbability;
   String? get errorMessage => _errorMessage;
@@ -97,25 +110,35 @@ class ChatViewModel extends ChangeNotifier {
   }
 
   String _buildSystemPrompt() {
-    var prompt = _settingsViewModel.systemPrompt;
+    // The short identity override MUST be the VERY FIRST thing the model sees
+    // so it overrides the baked-in identity before any other instructions.
+    // Followed by the full knowledge base (so templates and Firebase-loaded
+    // settings never lose identity details), then the persona/template prompt.
+    final buffer = StringBuffer();
+    buffer.write(shortIdentityOverride);
+    buffer.write('\n\n');
+    buffer.write(beatriceKnowledgeBase);
+    buffer.write('\n\n');
+    buffer.write(_settingsViewModel.systemPrompt);
+
     final language = _settingsViewModel.language;
     final nuance = _settingsViewModel.nuance;
     final userName = _settingsViewModel.userName;
     final agentName = _settingsViewModel.agentName;
 
     if (language.isNotEmpty) {
-      prompt +=
-          '\n\n## LANGUAGE PREFERENCE\nAlways converse, understand, and respond in $language.';
+      buffer.write(
+          '\n\n## LANGUAGE PREFERENCE\nAlways converse, understand, and respond in $language.');
     }
     if (nuance.isNotEmpty) {
-      prompt +=
-          '\n\n## ACTIVE REGISTER / NUANCE MODE: $nuance\nAdopt a ${nuance.toLowerCase()} conversational register in your delivery.';
+      buffer.write(
+          '\n\n## ACTIVE REGISTER / NUANCE MODE: $nuance\nAdopt a ${nuance.toLowerCase()} conversational register in your delivery.');
     }
-    prompt +=
-        '\n\n## NAMING & ADDRESSING DIRECTIVE\nYour name is "$agentName". The user\'s preferred name/title is "$userName". Naturally address the user as "$userName" during conversation.';
-    prompt +=
-        '\n\n## PROACTIVE CONVERSATION INITIATION DIRECTIVE\nWhen a conversation session starts, greet the user first. Address the user as "$userName". Dynamically pick up on a topic from past conversation memory.';
-    return prompt;
+    buffer.write(
+        '\n\n## NAMING & ADDRESSING DIRECTIVE\nYour name is "$agentName". The user\'s preferred name/title is "$userName". Naturally address the user as "$userName" during conversation.');
+    buffer.write(
+        '\n\n## PROACTIVE CONVERSATION INITIATION DIRECTIVE\nWhen a conversation session starts, greet the user first. Address the user as "$userName". Dynamically pick up on a topic from past conversation memory.');
+    return buffer.toString();
   }
 
   void _addSystemTurn() {
@@ -129,6 +152,10 @@ class ChatViewModel extends ChangeNotifier {
 
   /// Send a user message and stream the assistant reply. When not connected,
   /// surface an error turn instead of silently dropping the message.
+  ///
+  /// If the request requires a device action, it is routed through PrivateAgent
+  /// (classify → structured task → execute with verification → natural response)
+  /// instead of the normal Gemini chat.
   Future<void> sendMessage(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || _isSending) return;
@@ -156,8 +183,6 @@ class ChatViewModel extends ChangeNotifier {
     _isSending = true;
     notifyListeners();
 
-    // Stream the assistant reply into a single turn, updating it as chunks
-    // arrive so the UI shows progressive typing.
     final assistantTurn = ConversationTurn(
       timestamp: DateTime.now(),
       role: 'assistant',
@@ -168,6 +193,16 @@ class ChatViewModel extends ChangeNotifier {
     final assistantIndex = _turns.length - 1;
 
     try {
+      // ── PrivateAgent interception ──
+      // Classify the request first. If it needs a device action, run the
+      // full PrivateAgent flow and return a natural, verified response.
+      final classification = _classifier.classify(trimmed);
+      if (classification.requiresDeviceAction) {
+        await _runPrivateAgentFlow(trimmed, classification, assistantIndex);
+        return;
+      }
+
+      // ── Normal Gemini chat ──
       final buffer = StringBuffer();
       await for (final chunk in _geminiService.sendMessageStreaming(trimmed)) {
         if (chunk != null && chunk.isNotEmpty) {
@@ -179,7 +214,6 @@ class ChatViewModel extends ChangeNotifier {
       }
       final full = buffer.toString();
       if (full.isEmpty) {
-        // No content (e.g. safety-blocked) — replace with a clear note.
         _turns[assistantIndex] = _turns[assistantIndex]
             .copyWith(text: '(no response)', isFinal: true);
       } else {
@@ -199,6 +233,49 @@ class ChatViewModel extends ChangeNotifier {
       _isSending = false;
       notifyListeners();
     }
+  }
+
+  /// Run the full PrivateAgent flow for a device request and write the
+  /// natural, verified response into the assistant turn.
+  Future<void> _runPrivateAgentFlow(
+    String request,
+    ClassificationResult classification,
+    int assistantIndex,
+  ) async {
+    final task = _taskBuilder.build(classification);
+
+    // High-risk tasks require confirmation — for now we surface the
+    // confirmation prompt as the assistant turn. A future voice-confirm
+    // flow can re-invoke this after the user agrees.
+    if (task.requiresConfirmation && task.confirmationMessage != null) {
+      _turns[assistantIndex] = _turns[assistantIndex].copyWith(
+        text: task.confirmationMessage!,
+        isFinal: true,
+      );
+      _isSending = false;
+      notifyListeners();
+      return;
+    }
+
+    // Show a planning message while the task runs.
+    _turns[assistantIndex] = _turns[assistantIndex].copyWith(
+      text: _mobileUseAgent.currentMessage.isNotEmpty
+          ? _mobileUseAgent.currentMessage
+          : "I'm on it.",
+    );
+    notifyListeners();
+
+    // Execute the task via PrivateAgent.
+    final result = await _mobileUseAgent.runTask(task);
+
+    // Format the result into natural speech.
+    final speech = _responseFormatter.format(result);
+
+    _turns[assistantIndex] =
+        _turns[assistantIndex].copyWith(text: speech, isFinal: true);
+    _isSending = false;
+    _mobileUseAgent.reset();
+    notifyListeners();
   }
 
   Future<void> sendAudio(List<int> audioData) async {

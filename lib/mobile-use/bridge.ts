@@ -266,31 +266,6 @@ class MobileUseBridge {
   async notify(title: string, message: string): Promise<MobileUseResult> {
     return this.executeAction('notify', { title, message });
   }
-
-  async executeTermuxCommand(cmd: string): Promise<MobileUseResult> {
-const blockedPatterns = [
-      /rm\s+-rf\s+\//,
-      /mkfs/,
-      /dd\s+if=.*\/dev/,
-      /shutdown/,
-      /reboot/,
-      /wipe/,
-      /format/,
-    ];
-
-    for (const pattern of blockedPatterns) {
-      if (pattern.test(cmd)) {
-        return {
-          success: false,
-          data: null,
-          error: 'Command blocked by security sandbox',
-          verified: false,
-        };
-      }
-    }
-
-    return this.executeAction('execute_command', { cmd });
-  }
 }
 
 let bridgeInstance: MobileUseBridge | null = null;

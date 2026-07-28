@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">Lets Beatrice read your screen and perform taps, scrolls, and text entry in other apps on your behalf.</string>
+</resources>

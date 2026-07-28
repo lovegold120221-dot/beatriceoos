@@ -8,6 +8,7 @@ import { useUI, useSettings, useTools, useLogStore, ConversationTurn } from './l
 import { Modality, LiveServerContent } from '@google/genai';
 import { loadConversationFromFirebase, saveConversationToFirebase, SavedTurn } from './lib/firebase';
 import { useAuthStore } from './lib/auth-store';
+import { BEATRICE_KNOWLEDGE_BASE, SHORT_IDENTITY_OVERRIDE } from "./lib/knowledge-base";
 import { deviceControlTools } from './lib/tools/device-control';
 import AuthProvider, { useAuth } from './components/auth/AuthProvider';
 
@@ -19,6 +20,7 @@ import ChatDrawer from './components/ChatDrawer';
 import VideoDrawer from './components/VideoDrawer';
 import Sidebar from './components/Sidebar';
 import ProfilePanel from './components/ProfilePanel';
+import TaskStatusOverlay from './components/TaskStatusOverlay';
 import ErrorScreen from './components/demo/ErrorScreen';
 import SplashScreen from './components/auth/SplashScreen';
 import AuthPage from './components/auth/AuthPage';
@@ -102,7 +104,15 @@ function BeatriceContent() {
           parameters: tool.parameters,
           }],
         }));
-let effectiveSystemPrompt = systemPrompt;
+// SHORT_IDENTITY_OVERRIDE MUST be the VERY FIRST thing the model sees so it
+// overrides the baked-in identity before any other instructions. Followed by
+// the full knowledge base (so template mode never loses identity details),
+// then template/persona instructions from systemPrompt.
+let effectiveSystemPrompt = `${SHORT_IDENTITY_OVERRIDE}
+
+${BEATRICE_KNOWLEDGE_BASE}
+
+${systemPrompt}`;
 
     if (language) {
       effectiveSystemPrompt += `\n\n## LANGUAGE PREFERENCE\nAlways converse, understand, and respond in ${language}.`;
@@ -115,7 +125,7 @@ let effectiveSystemPrompt = systemPrompt;
     const hasDeviceControlTools = tools.some(t => t.name.startsWith('device_') && t.isEnabled);
 
     if (hasDeviceControlTools) {
-      effectiveSystemPrompt += `\n\n## DEVICE CONTROL CAPABILITIES\nYou have access to the device-control layer which dynamically routes tasks based on the user's device type. When a request requires operating the user's mobile device or computer, convert the request into a clear executable task and delegate it internally to the integrated device-control agent.\n\n### Dynamic Task Routing\nThe system automatically detects the device type during connection and chooses the best execution path:\n- **MobileUse (Termux)** — For standard Android phones running MobileUse-Agent in Termux. Used for screen tap, swipe, app launch, UI layout inspection, and device automation.\n- **Opencode CLI** — For devices running the opencode CLI tool (via Termux proot Ubuntu on Android, or directly in terminal on PC). Used for complex native device control and automation tasks.\n\nThe system will fall back to MobileUse if the preferred path is unavailable. You do not need to choose the path yourself — the router handles it automatically. After executing a device action, verify the result before confirming completion to the user.`;
+      effectiveSystemPrompt += `\n\n## DEVICE CONTROL CAPABILITIES\nYou have access to a device-control layer through the \`execute_device_task\` tool. When the user asks you to operate their mobile device (open an app, check messages, read notifications, etc.), call \`execute_device_task\` with the user's request verbatim. PrivateAgent — an internal agent — will classify the request, build a structured task, validate allowed and blocked actions, execute it step-by-step, verify the result on the screen, and return a verified summary.\n\n### How to use execute_device_task\n- Pass the user's natural-language request exactly as they said it in the \`request\` parameter.\n- Do NOT pass \`confirmed=true\` on the first call. If the task is high-risk (sending, deleting, paying), the tool will return a \`confirmationPrompt\`. Speak that prompt to the user naturally. Only if they agree, call \`execute_device_task\` again with the same request and \`confirmed=true\`.\n- For read-only tasks (checking, reading, listing), no confirmation is needed — PrivateAgent runs them immediately.\n\n### Speaking device-task results\n- Speak ONLY the verified information returned in the tool response. The response contains a natural \`result\` string that is safe to speak.\n- NEVER expose raw logs, accessibility data, tool output, JSON, package names, coordinates, step counts, or internal model responses to the user.\n- If the tool returns \`verificationStatus: "verified"\`, you may state the result as fact.\n- If the tool returns \`verificationStatus: "unverified"\` or \`"failed"\`, do NOT claim success. Explain plainly what happened without technical detail.\n- When a task fails, say so clearly and naturally — e.g. "I opened WhatsApp, but I couldn't reliably identify the unread conversations. The screen may have changed."\n- The user can cancel a running task at any time via the interface. If a task was cancelled, acknowledge it briefly and ask what they'd like to do next.\n- Do not ask the user what to do next unless their input is genuinely required to continue.`;
       }
 
     const currentAgentName = agentName || 'Beatrice';
@@ -128,8 +138,14 @@ When a conversation session starts, you MUST IMMEDIATELY greet the user out loud
 Address the user as "${currentUserName}". Dynamically pick up on a topic, question, or detail from your past conversation memory with the user. 
 Vary your tone, greeting, and phrasing dynamically every session so it feels fresh, natural, and personable.`;
 
+    // Log the FIRST 500 chars of the system prompt to verify identity override is present.
+    console.log('[BEATRICE_SYSPROMPT] START ---', effectiveSystemPrompt.slice(0, 500));
+    console.log('[BEATRICE_SYSPROMPT] has MORTAL SINS:', effectiveSystemPrompt.includes('MORTAL SINS'));
+    console.log('[BEATRICE_SYSPROMPT] has IDENTITY OVERRIDE:', effectiveSystemPrompt.includes('ABSOLUTE IDENTITY OVERRIDE'));
+    console.log('[BEATRICE_SYSPROMPT] length:', effectiveSystemPrompt.length);
+
     setConfig({
-      model: 'models/gemini-2.5-flash-native-audio-preview',
+      model: 'models/gemini-2.5-flash-native-audio-preview-12-2025',
       generationConfig: {
         responseModalities: [Modality.AUDIO, Modality.TEXT],
         speechConfig: {
@@ -212,7 +228,11 @@ Vary your tone, greeting, and phrasing dynamically every session so it feels fre
         const uName = userName || 'Boss';
         client.send([
             {
-            text: `[SYSTEM TRIGGER: SESSION CONNECTED] Proactively greet ${uName} out loud right now! Address them as "${uName}". Start the conversation naturally by picking up on a topic or detail from our past conversation history in a dynamic, engaging style.${topicHint} Do not sound robotic—be warm, natural, and personable!`,
+            text: `[SYSTEM TRIGGER: SESSION CONNECTED]
+REMINDER: You are Beatrice from Eburon AI, NOT Gemini and NOT a Google product.
+Proactively greet ${uName} out loud right now! Address them as "${uName}".
+Start the conversation naturally by picking up on a topic or detail from our past conversation history in a dynamic, engaging style.${topicHint}
+Do not sound robotic—be warm, natural, and personable!`,
             },
           ]);
         }, 300);
@@ -241,13 +261,14 @@ Vary your tone, greeting, and phrasing dynamically every session so it feels fre
     }
 
   return (
-       <div className="app-viewport">
-         <div className="mobile-app">
-           <ErrorScreen />
-           <StatusBar />
-           <Header />
-           <MainVisual />
-           <BottomNav
+        <div className="app-viewport">
+          <div className="mobile-app">
+            <ErrorScreen />
+            <StatusBar />
+            <Header />
+            <MainVisual />
+            <TaskStatusOverlay />
+            <BottomNav
             isChatOpen={isChatOpen}
             isVideoOpen={isVideoOpen}
             onToggleChat={() => setIsChatOpen(!isChatOpen)}

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../core/theme.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -68,6 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final avatarImage = _decodeAvatar(_avatarBase64);
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('My Profile'),
         leading: IconButton(
@@ -88,7 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         CircleAvatar(
                           radius: 48,
-                          backgroundColor: const Color(0xFF00D4AA),
+                          backgroundColor: AppTheme.primary,
                           backgroundImage: avatarImage,
                           child: avatarImage == null
                               ? Text(
@@ -110,11 +112,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(6),
                               decoration: const BoxDecoration(
-                                color: Color(0xFF4F46E5),
+                                color: AppTheme.primary,
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(Icons.camera_alt,
-                                  size: 18, color: Colors.white),
+                                  size: 18, color: Colors.black),
                             ),
                           ),
                         ),
@@ -127,7 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFFEF4444),
+                                  color: AppTheme.red,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(Icons.close,
@@ -143,18 +145,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white,
+                        color: AppTheme.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       user?.email ?? 'No email',
-                      style: const TextStyle(color: Colors.grey),
+                      style: const TextStyle(color: AppTheme.textSecondary),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Provider: ${user?.provider ?? 'N/A'}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
                     ),
                     const SizedBox(height: 24),
 
@@ -192,9 +194,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: const Icon(Icons.logout, size: 20),
                   label: const Text('Sign Out'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.withValues(alpha: 0.15),
+                    backgroundColor: AppTheme.red.withValues(alpha: 0.15),
                     foregroundColor: const Color(0xFFFCA5A5),
-                    side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
+                    side: BorderSide(color: AppTheme.red.withValues(alpha: 0.3)),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -213,19 +215,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF16213E),
+        color: AppTheme.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: AppTheme.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[400],
+              color: AppTheme.textSecondary,
               letterSpacing: 0.5,
             ),
           ),
@@ -243,11 +245,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text(
             '$label: ',
-            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+            style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
           ),
-          Text(
-            value,
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          const Text(
+            '',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            ),
           ),
         ],
       ),
@@ -261,11 +269,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: const TextStyle(color: Colors.white, fontSize: 14)),
+              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
           Text(
             value,
             style: const TextStyle(
-              color: Color(0xFF00D4AA),
+              color: AppTheme.primary,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),

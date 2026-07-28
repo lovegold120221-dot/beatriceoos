@@ -4,29 +4,6 @@
  */
 import { FunctionResponseScheduling } from '@google/genai';
 import { FunctionCall } from '../state';
-import { getMobileUseBridge } from '../mobile-use/bridge';
-
-const bridge = getMobileUseBridge();
-
-function ensureBridgeConnected(): Promise<boolean> {
-  return bridge.connect();
-}
-
-export async function executeWithProgress(
-  action: string,
-  request: Record<string, unknown>,
-  progressMessage: string
-): Promise<{ success: boolean; result: Record<string, unknown> | null; error: string | null; verified: boolean }> {
-  const connected = await ensureBridgeConnected();
-
-  if (!connected) {
-    return { success: false, result: null, error: 'MobileUse device bridge is not connected', verified: false };
-  }
-
-  const result = await bridge.executeAction(action as string, request as Record<string, unknown>);
-
-  return { success: result.success, result: result.data as Record<string, unknown> | null, error: result.error, verified: result.verified };
-}
 
 export const deviceControlTools: FunctionCall[] = [
   {
@@ -262,17 +239,24 @@ export const deviceControlTools: FunctionCall[] = [
     scheduling: FunctionResponseScheduling.INTERRUPT,
   },
   {
-    name: 'mobile_use',
-    description: 'Use the MobileUse-Agent mobile use agent to perform complex tasks on the authorized mobile device.',
+    name: 'execute_device_task',
+    description:
+      'Delegates a natural-language device request to PrivateAgent. PrivateAgent classifies the request (read-only / interactive / high-risk), builds a structured task, validates allowed and blocked actions, executes it step-by-step on the authorised mobile device, verifies the result on the screen, and returns a verified summary. Use this for any request that requires operating the user\'s phone — e.g. "check who messaged me on WhatsApp", "open my latest email", "read my notifications". For high-risk actions (sending, deleting, paying) PrivateAgent will require user confirmation before proceeding. Set confirmed=true only after the user has explicitly agreed to proceed with a high-risk task.',
     parameters: {
       type: 'OBJECT',
       properties: {
-        instruction: {
+        request: {
           type: 'STRING',
-          description: 'The natural language instruction for the mobile agent to execute.',
+          description:
+            'The user\'s natural-language request, exactly as they expressed it. PrivateAgent will classify and structure it.',
+        },
+        confirmed: {
+          type: 'BOOLEAN',
+          description:
+            'Set to true only when the user has explicitly confirmed a high-risk task. Omit or set to false for the first call; PrivateAgent will return a confirmation prompt if needed.',
         },
       },
-      required: ['instruction'],
+      required: ['request'],
     },
     isEnabled: true,
     scheduling: FunctionResponseScheduling.INTERRUPT,

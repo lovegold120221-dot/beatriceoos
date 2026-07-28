@@ -18,6 +18,8 @@ import 'data/services/gemini_service.dart';
 import 'data/services/device_control_service.dart';
 import 'data/services/mobile_use_ai_service.dart';
 import 'data/services/mobile_use_action_handler.dart';
+import 'data/services/screen_automation_service.dart';
+import 'domain/private_agent/orchestrator.dart';
 import 'domain/use_cases/auth_use_case.dart';
 import 'domain/use_cases/settings_use_case.dart';
 import 'ui/viewmodels/auth_viewmodel.dart';
@@ -113,6 +115,15 @@ class BeatriceApp extends StatelessWidget {
           update: (context, deviceControl, _) =>
               MobileUseActionHandler(deviceControl),
         ),
+        Provider<ScreenAutomationService>(
+          create: (_) => ScreenAutomationService(),
+        ),
+        ProxyProvider3<DeviceControlService, MobileUseAiService,
+            MobileUseActionHandler, MobileUseAgent>(
+          update: (context, deviceControl, aiService, actionHandler, prev) =>
+              prev ??
+              MobileUseAgent(deviceControl, aiService, actionHandler),
+        ),
         Provider<GeminiService>(create: (_) => GeminiService()),
         Provider<AudioService>(create: (_) => AudioService()),
 
@@ -126,15 +137,17 @@ class BeatriceApp extends StatelessWidget {
           update: (context, settingsUseCase, prev) =>
               prev ?? SettingsViewModel(settingsUseCase),
         ),
-        ChangeNotifierProxyProvider3<AuthViewModel, SettingsViewModel,
-            GeminiService, ChatViewModel>(
+        ChangeNotifierProxyProvider4<AuthViewModel, SettingsViewModel,
+            GeminiService, MobileUseAgent, ChatViewModel>(
           create: (context) => ChatViewModel(
             context.read<AuthViewModel>(),
             context.read<SettingsViewModel>(),
             context.read<GeminiService>(),
+            context.read<MobileUseAgent>(),
           ),
-          update: (context, auth, settings, gemini, prev) =>
-              prev ?? ChatViewModel(auth, settings, gemini),
+          update: (context, auth, settings, gemini, agent, prev) =>
+              prev ??
+              ChatViewModel(auth, settings, gemini, agent),
         ),
       ],
       child: MaterialApp(

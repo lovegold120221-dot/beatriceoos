@@ -80,10 +80,6 @@ export const useDeviceControl = create<{
   shizukuEnabled: boolean;
   accessibilityServiceEnabled: boolean;
   workspacePath: string;
-  deviceCategory: string;
-  activeExecutionPath: string;
-  opencodeUrl: string;
-  opencodeConnected: boolean;
   setMobileUseUrl: (url: string) => void;
   setMobileUseConnected: (connected: boolean) => void;
   setAdbEnabled: (enabled: boolean) => void;
@@ -94,10 +90,6 @@ export const useDeviceControl = create<{
   setShizukuEnabled: (enabled: boolean) => void;
   setAccessibilityServiceEnabled: (enabled: boolean) => void;
   setWorkspacePath: (path: string) => void;
-  setDeviceCategory: (category: string) => void;
-  setActiveExecutionPath: (path: string) => void;
-  setOpencodeUrl: (url: string) => void;
-  setOpencodeConnected: (connected: boolean) => void;
 }>(set => ({
   mobileUseUrl: 'http://localhost:5000',
   mobileUseConnected: false,
@@ -109,10 +101,6 @@ export const useDeviceControl = create<{
   shizukuEnabled: false,
   accessibilityServiceEnabled: false,
   workspacePath: '/storage/shared/MobileUse-Agent',
-  deviceCategory: 'unknown',
-  activeExecutionPath: 'mobile_use',
-  opencodeUrl: 'http://localhost:5001',
-  opencodeConnected: false,
   setMobileUseUrl: url => set({ mobileUseUrl: url }),
   setMobileUseConnected: connected => set({ mobileUseConnected: connected }),
   setAdbEnabled: enabled => set({ adbEnabled: enabled }),
@@ -123,10 +111,6 @@ export const useDeviceControl = create<{
   setShizukuEnabled: enabled => set({ shizukuEnabled: enabled }),
   setAccessibilityServiceEnabled: enabled => set({ accessibilityServiceEnabled: enabled }),
   setWorkspacePath: path => set({ workspacePath: path }),
-  setDeviceCategory: category => set({ deviceCategory: category }),
-  setActiveExecutionPath: path => set({ activeExecutionPath: path }),
-  setOpencodeUrl: url => set({ opencodeUrl: url }),
-  setOpencodeConnected: connected => set({ opencodeConnected: connected }),
 }));
 
 /**

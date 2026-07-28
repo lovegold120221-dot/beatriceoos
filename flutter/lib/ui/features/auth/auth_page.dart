@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../core/theme.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
 class AuthPage extends StatefulWidget {
@@ -52,7 +53,7 @@ class _AuthPageState extends State<AuthPage> {
     final error = authViewModel.errorMessage;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF070707),
+      backgroundColor: AppTheme.background,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -62,8 +63,8 @@ class _AuthPageState extends State<AuthPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.mic,
-                      size: 64, color: Colors.white.withValues(alpha: 0.8)),
+                  Icon(Icons.mic_none_rounded,
+                      size: 64, color: AppTheme.textPrimary.withValues(alpha: 0.8)),
                   const SizedBox(height: 16),
                   const Text(
                     'Beatrice',
@@ -71,16 +72,17 @@ class _AuthPageState extends State<AuthPage> {
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.5,
-                      color: Colors.white,
+                      color: AppTheme.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Sign in to continue',
+                    'SIGN IN TO CONTINUE',
                     style: TextStyle(
-                      fontSize: 13,
-                      letterSpacing: 2,
-                      color: Colors.grey,
+                      fontSize: 10,
+                      letterSpacing: 3,
+                      color: AppTheme.textMuted,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -89,11 +91,12 @@ class _AuthPageState extends State<AuthPage> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
+                        color: AppTheme.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.red.withValues(alpha: 0.3)),
                       ),
                       child: Text(error,
-                          style: const TextStyle(color: Colors.red, fontSize: 13)),
+                          style: const TextStyle(color: AppTheme.red, fontSize: 13)),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -156,7 +159,7 @@ class _AuthPageState extends State<AuthPage> {
                     onPressed: busy ? null : _handleGuest,
                     child: const Text(
                       'Continue as guest',
-                      style: TextStyle(color: Color(0xFF00D4AA), fontSize: 13),
+                      style: TextStyle(color: AppTheme.primary, fontSize: 13),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -167,7 +170,7 @@ class _AuthPageState extends State<AuthPage> {
                         _isSignUp
                             ? 'Already have an account? '
                             : "Don't have an account? ",
-                        style: const TextStyle(color: Colors.grey, fontSize: 13),
+                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                       ),
                       TextButton(
                         onPressed: busy
@@ -176,7 +179,7 @@ class _AuthPageState extends State<AuthPage> {
                         child: Text(
                           _isSignUp ? 'Sign In' : 'Sign Up',
                           style: const TextStyle(
-                              color: Color(0xFF00D4AA), fontSize: 13),
+                              color: AppTheme.primary, fontSize: 13),
                         ),
                       ),
                     ],

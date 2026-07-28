@@ -25,8 +25,11 @@ import { AudioStreamer } from '../../lib/audio-streamer';
 import { audioContext } from '../../lib/utils';
 import VolMeterWorket from '../../lib/worklets/vol-meter';
 import { useLogStore, useSettings } from '@/lib/state';
-import { routeInstruction } from '../../lib/task-router/router';
-import { executeWithProgress } from '../../lib/tools/device-control';
+import {
+  classifyAndBuildTask,
+  runStructuredTask,
+  formatResultAsSpeech,
+} from '../../lib/private-agent';
 
 export type UseLiveApiResults = {
   client: GenAILiveClient;
@@ -162,42 +165,64 @@ export function useLiveApi({
           isFinal: true,
         });
 
-        if (fc.name === 'mobile_use') {
-          const instruction = fc.args.instruction as string;
+        if (fc.name === 'execute_device_task') {
+          const request = fc.args.request as string;
+          const confirmed = fc.args.confirmed === true;
 
-          // Route through the dynamic task router
-          const { success, data, error, path } = await routeInstruction(instruction);
+          try {
+            // 1. Classify the request and build a structured task.
+            const { task, classification } = await classifyAndBuildTask(request, apiKey);
 
-          if (success) {
+            // 2. If the task is high-risk and not yet confirmed, return the
+            //    confirmation prompt as the tool response so Beatrice speaks
+            //    it and waits for the user to confirm verbally. The model
+            //    will re-call this tool with confirmed=true after consent.
+            if (task.requiresConfirmation && !confirmed) {
+              functionResponses.push({
+                id: fc.id,
+                name: fc.name,
+                response: {
+                  requiresConfirmation: true,
+                  classification: classification.classification,
+                  confirmationPrompt: task.confirmationMessage,
+                  instruction:
+                    'Ask the user for confirmation using the confirmationPrompt. ' +
+                    'If they agree, call execute_device_task again with the same request and confirmed=true. ' +
+                    'If they decline, do not call the tool again.',
+                },
+              });
+              continue;
+            }
+
+            // 3. Execute the structured task via PrivateAgent.
+            const result = await runStructuredTask(task, { apiKey });
+
+            // 4. Format the result into natural speech for Beatrice.
+            const speech = formatResultAsSpeech(result);
+
             functionResponses.push({
               id: fc.id,
               name: fc.name,
               response: {
-                result: data,
-                execution_path: path,
+                result: speech,
+                completionStatus: result.completionStatus,
+                verificationStatus: result.verificationStatus,
+                verified: result.verificationStatus === 'verified',
+                importantObservations: result.importantObservations,
+                stepsTaken: result.stepsTaken,
               },
             });
-          } else {
-            // Fallback to original MobileUse if routing fails
-            const { success: fallbackSuccess, result: fbResult, error: fbError } = await executeWithProgress(
-              'mobile_use',
-              fc.args as Record<string, unknown>,
-              `Fallback: Executing mobile use agent for instruction: ${fc.args.instruction}`
-            );
-
-            if (fallbackSuccess) {
-              functionResponses.push({
-                id: fc.id,
-                name: fc.name,
-                response: { result: fbResult, execution_path: 'mobile_use_fallback' },
-              });
-            } else {
-              functionResponses.push({
-                id: fc.id,
-                name: fc.name,
-                response: { error: fbError || error || 'Unknown error during mobile execution' },
-              });
-            }
+          } catch (err) {
+            functionResponses.push({
+              id: fc.id,
+              name: fc.name,
+              response: {
+                error:
+                  err instanceof Error
+                    ? err.message
+                    : 'PrivateAgent execution failed unexpectedly.',
+              },
+            });
           }
         } else {
           // Default behavior for other tools
@@ -236,7 +261,7 @@ export function useLiveApi({
       client.off('audio', onAudio);
       client.off('toolcall', onToolCall);
     };
-  }, [client]);
+  }, [client, apiKey]);
 
   const connect = useCallback(async () => {
     if (!config) {
