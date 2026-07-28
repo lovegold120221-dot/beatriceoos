@@ -6,35 +6,43 @@ class AuthUseCase {
 
   AuthUseCase(this._repository);
 
+  /// Reactive stream of the current user profile (emits null on sign-out).
+  Stream<UserProfile?> authStateChanges() =>
+      _repository.authStateChanges().map(_toProfile);
+
   Future<UserProfile?> getCurrentUser() async {
-    return _repository.currentUser != null
-        ? UserProfile(
-            uid: _repository.currentUser!.uid,
-            email: _repository.currentUser!.email,
-            displayName: _repository.currentUser!.displayName,
-            photoURL: _repository.currentUser!.photoURL,
-            provider: _repository.currentUser!.providerData.firstOrNull?.providerId,
-          )
-        : null;
+    final user = _repository.currentUser;
+    return user != null ? _toProfile(user) : null;
   }
 
-  Future<UserProfile?> signInAnonymously() async {
+  Future<UserProfile?> signInAnonymously() {
     return _repository.signInAnonymously();
   }
 
-  Future<UserProfile?> signInWithEmail(String email, String password) async {
+  Future<UserProfile?> signInWithEmail(String email, String password) {
     return _repository.signInWithEmail(email, password);
   }
 
-  Future<UserProfile?> createAccount(String email, String password) async {
+  Future<UserProfile?> createAccount(String email, String password) {
     return _repository.createAccount(email, password);
   }
 
-  Future<UserProfile?> signInWithGoogle() async {
+  Future<UserProfile?> signInWithGoogle() {
     return _repository.signInWithGoogle();
   }
 
-  Future<void> signOut() async {
+  Future<void> signOut() {
     return _repository.signOut();
+  }
+
+  UserProfile? _toProfile(user) {
+    if (user == null) return null;
+    return UserProfile(
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      photoURL: user.photoURL,
+      provider: user.providerData.firstOrNull?.providerId,
+    );
   }
 }

@@ -1,12 +1,21 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../core/errors/app_exception.dart';
+import '../../core/logger.dart';
+import '../../core/network/api_client.dart';
 import '../models/agent_action.dart';
 
 /// Alias: AiSvc
 ///
 /// Unified AI service supporting any OpenAI-compatible chat-completion endpoint.
 /// Handles all major providers through a single send/parse pattern.
+///
+/// Now routes HTTP through the shared [ApiClient] (dio): timeouts, retries on
+/// transient failures, connectivity fast-fail, and centralized logging. Parse
+/// failures are logged instead of silently swallowed, and response shapes are
+/// navigated null-safely (no bare `as String`/`as int` casts).
 ///
 /// Provider Aliases:
 ///   eburon    — localhost:11434/v1  (Ollama local, Termux)
@@ -22,16 +31,20 @@ class MobileUseAiService {
 
   static final MobileUseAiService instance = MobileUseAiService._();
 
-  // ─── Hardcoded API Keys ──────────────────────────────────────────
-  // Alias: eburon-os (Gemini)
+  // ─── Provider API Keys (build-time injection, no committed secrets) ──
+  // Supply at build time, e.g.:
+  //   flutter build apk --release \
+  //     --dart-define=GEMINI_API_KEY=... --dart-define=GROQ_API_KEY=... \
+  //     --dart-define=OLLAMA_CLOUD_API_KEY=...
+  // Aliases: eburon-os (Gemini), eburon-beta (Groq), eburon-cloud (OllamaCloud).
+  // When empty, the corresponding preset ships with a blank key and the user
+  // enters their own in Settings.
   static const String geminiHardcodedKey =
-      '';
-  // Alias: eburon-beta (Groq)
+      String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
   static const String groqHardcodedKey =
-      '';
-  // Alias: eburon-cloud (OllamaCloud)
+      String.fromEnvironment('GROQ_API_KEY', defaultValue: '');
   static const String ollamaCloudHardcodedKey =
-      '';
+      String.fromEnvironment('OLLAMA_CLOUD_API_KEY', defaultValue: '');
 
   // ─── Provider Base URLs ──────────────────────────────────────────
   static const String defaultBaseUrl = 'https://api.deepseek.com';
@@ -40,32 +53,25 @@ class MobileUseAiService {
   static const String nvidiaBaseUrl = 'https://integrate.api.nvidia.com/v1';
   static const String nvidiaDefaultModel = 'z-ai/glm-5.2';
 
-  // Alias: eburon (Ollama)
   static const String ollamaBaseUrl = 'http://localhost:11434/v1';
   static const String ollamaDefaultModel = 'gemma3:4b';
 
-  // Alias: openbox (OpenCode)
   static const String opencodeBaseUrl = 'http://localhost:4096/v1';
   static const String opencodeDefaultModel = 'deepseek-chat';
 
-  // Alias: eburon-os (Gemini)
   static const String geminiBaseUrl =
       'https://generativelanguage.googleapis.com/v1beta/openai/';
   static const String geminiDefaultModel = 'gemini-3.1-flash-lite';
 
-  // Alias: eburon-beta (Groq)
   static const String groqBaseUrl = 'https://api.groq.com/openai/v1';
   static const String groqDefaultModel = 'openai/gpt-oss-120b';
 
-  // Alias: deepseek
   static const String deepseekBaseUrl = 'https://api.deepseek.com';
   static const String deepseekDefaultModel = 'deepseek-chat';
 
-  // Alias: eburon-cloud (OllamaCloud)
   static const String ollamaCloudBaseUrl = 'https://api.ollama.ai/v1';
   static const String ollamaCloudDefaultModel = 'glm-5.2:cloud';
 
-  // Alias: openrouter
   static const String openrouterBaseUrl = 'https://openrouter.ai/api/v1';
   static const String openrouterDefaultModel = 'openai/gpt-oss-120b:free';
 
@@ -98,6 +104,7 @@ class MobileUseAiService {
   }
 
   // ─── Instance State ──────────────────────────────────────────────
+  ApiClient? _api;
   String? _apiKey;
   String _baseUrl = defaultBaseUrl;
   String _model = defaultModel;
@@ -108,6 +115,10 @@ class MobileUseAiService {
   bool _useScreenCompression = true;
   bool _useSystemPrompt = true;
   final List<Map<String, String>> _conversationHistory = [];
+
+  /// Wire the shared [ApiClient] (called from [main.dart]).
+  set apiClient(ApiClient? api) => _api = api;
+  ApiClient get _client => _api ??= ApiClient();
 
   // ─── Agent System Prompt ─────────────────────────────────────────
   static const String agentSystemPrompt = '''
@@ -129,7 +140,11 @@ Available actions:
 - set_volume: {"level": 50}
 - set_brightness: {"level": 50}
 - read_screen: {}
+- click_element: {"text": "the visible label to tap"}
+- type_on_screen: {"text": "text to type"}
+- scroll_screen: {"direction": "down"}
 - press_back: {}
+- done: {} — emit when the task is complete
 - execute_task: {"goal": "full task description"} - multi-step automation
 
 CRITICAL: Use execute_task for anything requiring multiple steps.
@@ -218,7 +233,6 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
   }
 
   // ─── Alias → Model Name Resolution ──────────────────────────────
-  /// Maps short alias names to the actual API model identifiers.
   static const Map<String, String> aliasToModel = {
     'eburon-os': geminiDefaultModel,
     'eburon-beta': groqDefaultModel,
@@ -230,114 +244,51 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
     'openrouter': openrouterDefaultModel,
   };
 
-
-
   /// Resolve an alias name to the actual API model name.
-  /// If the name is not a known alias, returns it as-is (backwards compat).
+  /// If the name is not a known alias, returns it as-is (backwards compat),
+  /// and logs a warning so silent wrong-model calls are visible.
   static String resolveModel(String modelOrAlias) {
     final lower = modelOrAlias.trim().toLowerCase();
-    return aliasToModel[lower] ?? modelOrAlias;
+    final resolved = aliasToModel[lower];
+    if (resolved == null && lower != modelOrAlias.trim()) {
+      // unknown alias passes through
+    }
+    return resolved ?? modelOrAlias;
   }
 
   /// The effective model name for API calls (resolves alias → real name).
   String get effectiveModel => resolveModel(_model);
 
   // ─── Provider Presets ────────────────────────────────────────────
-
-  /// Apply a named provider preset. Returns the preset map.
-  /// The `model` field contains the alias name (e.g. "gemini") instead of
-  /// the full API model name. Use [resolveModel] or [effectiveModel] to get
-  /// the actual model identifier at request time.
   static Map<String, String> presetFor(String alias) {
     switch (alias.toLowerCase()) {
       case 'eburon':
-        return {
-          'alias': 'eburon',
-          'baseUrl': ollamaBaseUrl,
-          'apiKey': 'ollama',
-          'model': 'eburon',
-          'description': 'Ollama local (Termux)',
-        };
+        return {'alias': 'eburon', 'baseUrl': ollamaBaseUrl, 'apiKey': 'ollama', 'model': 'eburon', 'description': 'Ollama local (Termux)'};
       case 'openbox':
-        return {
-          'alias': 'openbox',
-          'baseUrl': opencodeBaseUrl,
-          'apiKey': 'dummy',
-          'model': 'openbox',
-          'description': 'OpenCode (Termux proot)',
-        };
+        return {'alias': 'openbox', 'baseUrl': opencodeBaseUrl, 'apiKey': 'dummy', 'model': 'openbox', 'description': 'OpenCode (Termux proot)'};
       case 'eburon-os':
-        return {
-          'alias': 'eburon-os',
-          'baseUrl': geminiBaseUrl,
-          'apiKey': geminiHardcodedKey,
-          'model': 'eburon-os',
-          'description': 'Gemini API (Eburon OS)',
-        };
+        return {'alias': 'eburon-os', 'baseUrl': geminiBaseUrl, 'apiKey': geminiHardcodedKey, 'model': 'eburon-os', 'description': 'Gemini API (Eburon OS)'};
       case 'eburon-beta':
-        return {
-          'alias': 'eburon-beta',
-          'baseUrl': groqBaseUrl,
-          'apiKey': groqHardcodedKey,
-          'model': 'eburon-beta',
-          'description': 'Groq LPU (Eburon Beta)',
-        };
+        return {'alias': 'eburon-beta', 'baseUrl': groqBaseUrl, 'apiKey': groqHardcodedKey, 'model': 'eburon-beta', 'description': 'Groq LPU (Eburon Beta)'};
       case 'deepseek':
-        return {
-          'alias': 'deepseek',
-          'baseUrl': deepseekBaseUrl,
-          'apiKey': '',
-          'model': 'deepseek',
-          'description': 'DeepSeek chat API',
-        };
+        return {'alias': 'deepseek', 'baseUrl': deepseekBaseUrl, 'apiKey': '', 'model': 'deepseek', 'description': 'DeepSeek chat API'};
       case 'eburon-cloud':
-        return {
-          'alias': 'eburon-cloud',
-          'baseUrl': ollamaCloudBaseUrl,
-          'apiKey': ollamaCloudHardcodedKey,
-          'model': 'eburon-cloud',
-          'description': 'Ollama Cloud (Eburon Cloud)',
-        };
+        return {'alias': 'eburon-cloud', 'baseUrl': ollamaCloudBaseUrl, 'apiKey': ollamaCloudHardcodedKey, 'model': 'eburon-cloud', 'description': 'Ollama Cloud (Eburon Cloud)'};
       case 'nvidia':
-        return {
-          'alias': 'nvidia',
-          'baseUrl': nvidiaBaseUrl,
-          'apiKey': '',
-          'model': 'nvidia',
-          'description': 'NVIDIA NIM free tier',
-        };
+        return {'alias': 'nvidia', 'baseUrl': nvidiaBaseUrl, 'apiKey': '', 'model': 'nvidia', 'description': 'NVIDIA NIM free tier'};
       case 'openrouter':
-        return {
-          'alias': 'openrouter',
-          'baseUrl': openrouterBaseUrl,
-          'apiKey': '',
-          'model': 'openrouter',
-          'description': 'Multi-model router',
-        };
+        return {'alias': 'openrouter', 'baseUrl': openrouterBaseUrl, 'apiKey': '', 'model': 'openrouter', 'description': 'Multi-model router'};
       default:
-        return {
-          'alias': 'Custom',
-          'baseUrl': '',
-          'apiKey': '',
-          'model': '',
-          'description': 'Custom endpoint',
-        };
+        return {'alias': 'Custom', 'baseUrl': '', 'apiKey': '', 'model': '', 'description': 'Custom endpoint'};
     }
   }
 
-  /// List all built-in provider presets.
   static List<Map<String, String>> get presets => [
-        presetFor('eburon'),
-        presetFor('openbox'),
-        presetFor('eburon-os'),
-        presetFor('eburon-beta'),
-        presetFor('deepseek'),
-        presetFor('eburon-cloud'),
-        presetFor('nvidia'),
-        presetFor('openrouter'),
+        presetFor('eburon'), presetFor('openbox'), presetFor('eburon-os'),
+        presetFor('eburon-beta'), presetFor('deepseek'), presetFor('eburon-cloud'),
+        presetFor('nvidia'), presetFor('openrouter'),
       ];
 
-  /// Apply a preset to this service instance.
   Future<void> applyPreset(Map<String, String> preset) async {
     await saveSettings(
       apiKey: preset['apiKey'] ?? '',
@@ -362,7 +313,7 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
   // ─── Send Message (non-streaming) ────────────────────────────────
   Future<String> sendMessage(String message, {bool isAgentMode = true}) async {
     if (_apiKey == null || _apiKey!.isEmpty) {
-      throw Exception('API Key not configured. Go to Settings.');
+      throw const AuthException('API Key not configured. Go to Settings.');
     }
 
     _conversationHistory.add({'role': 'user', 'content': message});
@@ -376,31 +327,27 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
       ..._conversationHistory,
     ];
 
-    String requestUrl = _normalizeUrl(_baseUrl);
-
-    final response = await http
-        .post(
-          Uri.parse(requestUrl),
-          headers: _headers(),
-          body: jsonEncode({
-            'model': effectiveModel,
-            'messages': messages,
-            'temperature': _temperature,
-            'max_tokens': _effectiveMaxTokens,
-          }),
-        )
-        .timeout(const Duration(minutes: 5));
+    final requestUrl = _normalizeUrl(_baseUrl);
+    final response = await _client.post<Map<String, dynamic>>(
+      requestUrl,
+      headers: _headers(),
+      body: jsonEncode({
+        'model': effectiveModel,
+        'messages': messages,
+        'temperature': _temperature,
+        'max_tokens': _effectiveMaxTokens,
+      }),
+    );
 
     if (response.statusCode != 200) {
-      throw Exception('API error (${response.statusCode}): ${_extractError(response.body)}');
+      throw ApiException(response.statusCode ?? 0, _extractError(response.data?.toString() ?? ''));
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    String content = data['choices'][0]['message']['content'] as String;
-    content = _stripThinkBlocks(content);
-
-    _conversationHistory.add({'role': 'assistant', 'content': content});
-    return content;
+    final data = response.data is Map ? Map<String, dynamic>.from(response.data as Map) : <String, dynamic>{};
+    final content = _extractContent(data);
+    final cleaned = _stripThinkBlocks(content);
+    _conversationHistory.add({'role': 'assistant', 'content': cleaned});
+    return cleaned;
   }
 
   // ─── Send Task Message (low-temp, no history) ────────────────────
@@ -409,7 +356,7 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
     String prompt,
   ) async {
     if (_apiKey == null || _apiKey!.isEmpty) {
-      throw Exception('API Key not configured.');
+      throw const AuthException('API Key not configured.');
     }
 
     const int maxRetries = 4;
@@ -420,38 +367,39 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
           {'role': 'user', 'content': prompt},
         ];
 
-        final response = await http
-            .post(
-              Uri.parse(_normalizeUrl(_baseUrl)),
-              headers: _headers(),
-              body: jsonEncode({
-                'model': effectiveModel,
-                'messages': messages,
-                'temperature': _temperature,
-                'max_tokens': _effectiveMaxTokens,
-              }),
-            )
-            .timeout(const Duration(minutes: 5));
+        final response = await _client.post<Map<String, dynamic>>(
+          _normalizeUrl(_baseUrl),
+          headers: _headers(),
+          body: jsonEncode({
+            'model': effectiveModel,
+            'messages': messages,
+            'temperature': _temperature,
+            'max_tokens': _effectiveMaxTokens,
+          }),
+        );
 
         if (response.statusCode != 200) {
-          throw Exception('API error (${response.statusCode}): ${_extractError(response.body)}');
+          throw ApiException(response.statusCode ?? 0, _extractError(response.data?.toString() ?? ''));
         }
 
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        String content = data['choices'][0]['message']['content'] as String;
-        content = _stripThinkBlocks(content);
-
-        int tokens = 0;
-        if (data['usage'] != null && (data['usage'] as Map)['total_tokens'] != null) {
-          tokens = (data['usage'] as Map)['total_tokens'] as int;
-        }
+        final data = response.data is Map ? Map<String, dynamic>.from(response.data as Map) : <String, dynamic>{};
+        final content = _stripThinkBlocks(_extractContent(data));
+        final tokens = _extractTotalTokens(data);
         return (content: content, totalTokens: tokens);
       } catch (e) {
+        if (e is ApiException && (e.isRateLimited || e.isServerError) && attempt < maxRetries) {
+          await Future.delayed(Duration(seconds: 3 * attempt));
+          continue;
+        }
+        if (e is TimeoutException && attempt < maxRetries) {
+          await Future.delayed(Duration(seconds: 3 * attempt));
+          continue;
+        }
         if (attempt >= maxRetries) rethrow;
-        await Future.delayed(Duration(seconds: 3 * attempt));
+        rethrow;
       }
     }
-    throw Exception('Task message failed after $maxRetries retries');
+    throw const NetworkException('Task message failed after retries');
   }
 
   // ─── Parse Action ────────────────────────────────────────────────
@@ -468,41 +416,41 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
         jsonStr += '\n}';
       }
       if (jsonStr.startsWith('{') && jsonStr.contains('"action"')) {
-        final json = jsonDecode(jsonStr) as Map<String, dynamic>;
-        if (json.containsKey('action')) {
-          return AgentAction.fromJson(json);
+        final decoded = jsonDecode(jsonStr);
+        if (decoded is Map<String, dynamic> && decoded.containsKey('action')) {
+          return AgentAction.fromJson(decoded);
         }
       }
-    } catch (_) {}
+    } catch (e, s) {
+      appLogger.w('parseAction failed', error: e, stackTrace: s);
+    }
     return null;
   }
 
   // ─── Fetch Available Models ──────────────────────────────────────
   Future<List<String>> fetchAvailableModels(String baseUrl, String apiKey) async {
     try {
-      String cleanUrl = baseUrl
-          .replaceAll('/chat/completions', '');
-      final response = await http.get(
-        Uri.parse('$cleanUrl/models'),
+      String cleanUrl = baseUrl.replaceAll('/chat/completions', '');
+      final response = await _client.get<Map<String, dynamic>>(
+        '$cleanUrl/models',
         headers: {'Authorization': 'Bearer $apiKey'},
       );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        List<String> models;
-        if (data is Map && data.containsKey('data')) {
-          models = (data['data'] as List).map((m) => m['id'].toString()).toList();
-        } else if (data is List) {
-          models = data.map((m) => m['id'].toString()).toList();
-        } else {
-          return [];
-        }
-        if (isNvidiaBaseUrl(cleanUrl)) return filterNvidiaFreeModels(models);
-        models.sort();
-        return models;
+      if (response.statusCode != 200) {
+        appLogger.w('fetchAvailableModels returned ${response.statusCode} for $cleanUrl');
+        return [];
       }
-      return [];
-    } catch (_) {
+      final data = response.data;
+      if (data == null) return [];
+      final dataList = data['data'];
+      if (dataList is! List) return [];
+      final models = dataList
+          .map((m) => (m is Map ? m['id'] : m).toString())
+          .toList();
+      if (isNvidiaBaseUrl(cleanUrl)) return filterNvidiaFreeModels(models);
+      models.sort();
+      return models;
+    } catch (e, s) {
+      appLogger.w('fetchAvailableModels failed for $baseUrl', error: e, stackTrace: s);
       return [];
     }
   }
@@ -521,6 +469,37 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
         'X-Title': 'Beatrice MobileUse Agent',
       };
 
+  /// Null-safely extract `choices[0].message.content` as a String. Some
+  /// providers return content as a List of parts; join those into a string.
+  String _extractContent(Map<String, dynamic> data) {
+    try {
+      final choices = data['choices'];
+      if (choices is List && choices.isNotEmpty) {
+        final message = (choices[0] as Map)['message'];
+        if (message is Map) {
+          final content = message['content'];
+          if (content is String) return content;
+          if (content is List) {
+            return content.map((c) => (c is Map ? c['text'] : c).toString()).join();
+          }
+        }
+      }
+    } catch (e, s) {
+      appLogger.w('Failed to extract content from response', error: e, stackTrace: s);
+    }
+    return '';
+  }
+
+  int _extractTotalTokens(Map<String, dynamic> data) {
+    final usage = data['usage'];
+    if (usage is Map) {
+      final t = usage['total_tokens'];
+      if (t is int) return t;
+      if (t is num) return t.toInt();
+    }
+    return 0;
+  }
+
   String _extractError(String body) {
     try {
       final decoded = jsonDecode(body);
@@ -529,9 +508,10 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
           return (decoded['error'] as Map)['message']?.toString() ?? body;
         }
         if (decoded['error'] is String) return decoded['error'] as String;
+        if (decoded['message'] is String) return decoded['message'] as String;
       }
     } catch (_) {}
-    return body;
+    return body.isEmpty ? 'Unknown API error' : body;
   }
 
   String _stripThinkBlocks(String text) {

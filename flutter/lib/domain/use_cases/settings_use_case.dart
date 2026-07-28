@@ -16,6 +16,8 @@ class SettingsUseCase {
     required String userName,
     required String agentName,
     required List<FunctionCall> tools,
+    AiEngineSettings? aiEngine,
+    DeviceControlSettings? deviceControl,
   }) async {
     return _repository.saveSettings(
       systemPrompt: systemPrompt,
@@ -26,18 +28,20 @@ class SettingsUseCase {
       userName: userName,
       agentName: agentName,
       tools: tools,
+      aiEngine: aiEngine,
+      deviceControl: deviceControl,
     );
   }
 
-  Future<Map<String, dynamic>?> loadSettings() async {
+  Future<Map<String, dynamic>?> loadSettings() {
     return _repository.loadSettings();
   }
 
-  Future<void> saveTemplate(Template template) async {
+  Future<void> saveTemplate(Template template) {
     return _repository.saveTemplate(template);
   }
 
-  Future<Template?> loadTemplate() async {
+  Future<Template?> loadTemplate() {
     return _repository.loadTemplate();
   }
 

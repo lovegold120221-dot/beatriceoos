@@ -1,43 +1,29 @@
-import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../ui/viewmodels/auth_viewmodel.dart';
 import '../ui/features/auth/auth_wrapper.dart';
 import '../ui/features/chat/chat_screen.dart';
 import '../ui/features/settings/settings_screen.dart';
 import '../ui/features/profile/profile_screen.dart';
 
+/// Named-route generator for [MaterialApp.onGenerateRoute].
+///
+/// Replaces the dead `GoRouter.create()` that previously lived here and the
+/// stale duplicate in `lib/app.dart` (now deleted). Keeps a single source of
+/// truth for navigation.
 class AppRouter {
   AppRouter._();
 
-  static GoRouter create(BuildContext context) {
-    final authViewModel = context.read<AuthViewModel>();
-    return GoRouter(
-      initialLocation: '/',
-      refreshListenable: authViewModel,
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const AuthWrapper(),
-          routes: [
-            GoRoute(
-              path: 'chat',
-              builder: (context, state) => const ChatScreen(),
-            ),
-            GoRoute(
-              path: 'settings',
-              builder: (context, state) => const SettingsScreen(),
-            ),
-            GoRoute(
-              path: 'profile',
-              builder: (context, state) => const ProfileScreen(),
-            ),
-          ],
-        ),
-      ],
-      errorBuilder: (context, state) => Scaffold(
-        body: Center(child: Text('Error: ${state.error}')),
-      ),
-    );
+  static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case '/':
+        return MaterialPageRoute(builder: (_) => const AuthWrapper());
+      case '/chat':
+        return MaterialPageRoute(builder: (_) => const ChatScreen());
+      case '/settings':
+        return MaterialPageRoute(builder: (_) => const SettingsScreen());
+      case '/profile':
+        return MaterialPageRoute(builder: (_) => const ProfileScreen());
+      default:
+        return MaterialPageRoute(builder: (_) => const AuthWrapper());
+    }
   }
 }

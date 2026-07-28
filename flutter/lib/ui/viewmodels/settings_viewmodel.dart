@@ -1,13 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../../core/constants.dart';
+import '../../core/logger.dart';
 import '../../data/models/function_call_model.dart';
 import '../../data/models/template_model.dart';
+import '../../data/repositories/settings_repository.dart';
 import '../../domain/use_cases/settings_use_case.dart';
 
 class SettingsViewModel extends ChangeNotifier {
-  final SettingsUseCase _settingsUseCase;
-
   SettingsViewModel(this._settingsUseCase);
+
+  final SettingsUseCase _settingsUseCase;
+  Timer? _saveResetTimer;
 
   String _systemPrompt = AppConstants.defaultSystemPrompt;
   String _model = AppConstants.defaultModel;
@@ -18,8 +24,16 @@ class SettingsViewModel extends ChangeNotifier {
   String _agentName = AppConstants.defaultAgentName;
   Template _template = Template.customerSupport;
   final List<FunctionCall> _tools = [];
+  AiEngineSettings _aiEngine = const AiEngineSettings(
+    alias: 'eburon',
+    baseUrl: 'http://localhost:11434/v1',
+    apiKey: 'ollama',
+    model: 'gemma3:4b',
+  );
+  DeviceControlSettings _deviceControl = const DeviceControlSettings();
+
   bool _isLoading = false;
-  String _saveStatus = 'idle';
+  String _saveStatus = 'idle'; // idle | saving | saved | error
   String _statusMessage = '';
 
   String get systemPrompt => _systemPrompt;
@@ -31,6 +45,8 @@ class SettingsViewModel extends ChangeNotifier {
   String get agentName => _agentName;
   Template get template => _template;
   List<FunctionCall> get tools => _tools;
+  AiEngineSettings get aiEngine => _aiEngine;
+  DeviceControlSettings get deviceControl => _deviceControl;
   bool get isLoading => _isLoading;
   String get saveStatus => _saveStatus;
   String get statusMessage => _statusMessage;
@@ -39,22 +55,44 @@ class SettingsViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final settings = await _settingsUseCase.loadSettings();
-    if (settings != null) {
-      _systemPrompt = settings['systemPrompt'] ?? _systemPrompt;
-      _model = settings['model'] ?? _model;
-      _voice = settings['voice'] ?? _voice;
-      _language = settings['language'] ?? _language;
-      _nuance = settings['nuance'] ?? _nuance;
-      _userName = settings['userName'] ?? _userName;
-      _agentName = settings['agentName'] ?? _agentName;
+    try {
+      final settings = await _settingsUseCase.loadSettings();
+      if (settings != null) {
+        _systemPrompt = (settings['systemPrompt'] as String?) ?? _systemPrompt;
+        _model = (settings['model'] as String?) ?? _model;
+        _voice = (settings['voice'] as String?) ?? _voice;
+        _language = (settings['language'] as String?) ?? _language;
+        _nuance = (settings['nuance'] as String?) ?? _nuance;
+        _userName = (settings['userName'] as String?) ?? _userName;
+        _agentName = (settings['agentName'] as String?) ?? _agentName;
+        final toolsRaw = settings['tools'];
+        if (toolsRaw is List) {
+          _tools
+            ..clear()
+            ..addAll(
+              toolsRaw
+                  .whereType<Map<String, dynamic>>()
+                  .map(FunctionCall.fromJson),
+            );
+        }
+        final aiRaw = settings['aiEngine'];
+        if (aiRaw is Map<String, dynamic>) {
+          _aiEngine = AiEngineSettings.fromJson(aiRaw);
+        }
+        final dcRaw = settings['deviceControl'];
+        if (dcRaw is Map<String, dynamic>) {
+          _deviceControl = DeviceControlSettings.fromJson(dcRaw);
+        }
+      }
+
+      final savedTemplate = await _settingsUseCase.loadTemplate();
+      if (savedTemplate != null) _template = savedTemplate;
+    } catch (e, s) {
+      appLogger.w('loadSettings failed', error: e, stackTrace: s);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    final savedTemplate = await _settingsUseCase.loadTemplate();
-    if (savedTemplate != null) _template = savedTemplate;
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   void setSystemPrompt(String prompt) {
@@ -98,9 +136,20 @@ class SettingsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setAiEngine(AiEngineSettings settings) {
+    _aiEngine = settings;
+    notifyListeners();
+  }
+
+  void setDeviceControl(DeviceControlSettings settings) {
+    _deviceControl = settings;
+    notifyListeners();
+  }
+
   Future<void> saveSettings() async {
+    _saveResetTimer?.cancel();
     _saveStatus = 'saving';
-    _statusMessage = 'Saving to Firebase...';
+    _statusMessage = 'Saving…';
     notifyListeners();
 
     try {
@@ -113,18 +162,36 @@ class SettingsViewModel extends ChangeNotifier {
         userName: _userName,
         agentName: _agentName,
         tools: _tools,
+        aiEngine: _aiEngine,
+        deviceControl: _deviceControl,
       );
       _saveStatus = 'saved';
-      _statusMessage = 'Settings saved to Firebase!';
-      await Future.delayed(const Duration(seconds: 4));
-    } catch (e) {
+      _statusMessage = 'Settings saved.';
+      _scheduleReset(const Duration(seconds: 4));
+    } catch (e, s) {
+      appLogger.w('saveSettings failed', error: e, stackTrace: s);
+      // Keep the error visible until the reset timer fires — do NOT overwrite
+      // it back to idle here (that was the previous bug).
       _saveStatus = 'error';
-      _statusMessage = e.toString();
+      _statusMessage = _humanize(e);
+      _scheduleReset(const Duration(seconds: 6));
     }
-
-    _saveStatus = 'idle';
-    _statusMessage = '';
     notifyListeners();
+  }
+
+  void _scheduleReset(Duration delay) {
+    _saveResetTimer?.cancel();
+    _saveResetTimer = Timer(delay, () {
+      _saveStatus = 'idle';
+      _statusMessage = '';
+      notifyListeners();
+    });
+  }
+
+  String _humanize(Object error) {
+    final text = error.toString();
+    final cleaned = text.replaceFirst(RegExp(r'^\[?\w*Exception\]?\s*'), '').trim();
+    return cleaned.isEmpty ? 'Failed to save settings.' : cleaned;
   }
 
   void toggleTool(String toolName) {
@@ -134,5 +201,11 @@ class SettingsViewModel extends ChangeNotifier {
           _tools[index].copyWith(isEnabled: !_tools[index].isEnabled);
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _saveResetTimer?.cancel();
+    super.dispose();
   }
 }

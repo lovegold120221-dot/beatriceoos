@@ -4,11 +4,8 @@ class AppTheme {
   AppTheme._();
 
   static const Color _primary = Color(0xFF4F46E5);
-  static const Color _primaryDark = Color(0xFF4338CA);
   static const Color _surface = Color(0xFF1A1A2E);
   static const Color _surfaceLight = Color(0xFF16213E);
-  static const Color _accent = Color(0xFF00D4AA);
-  static const Color _error = Color(0xFFEF4444);
   static const Color _textPrimary = Color(0xFFFFFFFF);
   static const Color _textSecondary = Color(0xFF94A3B8);
 

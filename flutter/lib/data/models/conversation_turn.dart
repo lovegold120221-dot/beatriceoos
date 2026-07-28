@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/logger.dart';
+
 class ConversationTurn extends Equatable {
   final DateTime timestamp;
   final String role;
@@ -49,18 +51,37 @@ class ConversationTurn extends Equatable {
         'groundingChunks': groundingChunks,
       };
 
-  factory ConversationTurn.fromJson(Map<String, dynamic> json) => ConversationTurn(
-        timestamp: DateTime.parse(json['timestamp']),
-        role: json['role'],
-        text: json['text'],
-        isFinal: json['isFinal'] ?? true,
-        toolUseRequest: json['toolUseRequest'],
-        toolUseResponse: json['toolUseResponse'],
-        groundingChunks: json['groundingChunks'] != null
-            ? List<dynamic>.from(json['groundingChunks'])
-            : null,
-      );
+  factory ConversationTurn.fromJson(Map<String, dynamic> json) {
+    // Parse timestamp defensively: a malformed stored value must not crash the
+    // whole deserialization path (which would lose the entire conversation).
+    final rawTimestamp = json['timestamp'];
+    DateTime timestamp;
+    if (rawTimestamp is String) {
+      try {
+        timestamp = DateTime.parse(rawTimestamp);
+      } catch (e, s) {
+        appLogger.w('Malformed conversation timestamp "$rawTimestamp", using now',
+            error: e, stackTrace: s);
+        timestamp = DateTime.now();
+      }
+    } else {
+      timestamp = DateTime.now();
+    }
+
+    return ConversationTurn(
+      timestamp: timestamp,
+      role: (json['role'] as String?) ?? 'system',
+      text: (json['text'] as String?) ?? '',
+      isFinal: (json['isFinal'] as bool?) ?? true,
+      toolUseRequest: json['toolUseRequest'] as String?,
+      toolUseResponse: json['toolUseResponse'] as String?,
+      groundingChunks: json['groundingChunks'] != null
+          ? List<dynamic>.from(json['groundingChunks'] as List)
+          : null,
+    );
+  }
 
   @override
-  List<Object?> get props => [timestamp, role, text, isFinal, toolUseRequest, toolUseResponse, groundingChunks];
+  List<Object?> get props =>
+      [timestamp, role, text, isFinal, toolUseRequest, toolUseResponse, groundingChunks];
 }

@@ -1,10 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-import 'app.dart';
+
+import 'core/logger.dart';
+import 'core/router.dart';
 import 'core/theme.dart';
+import 'core/network/api_client.dart';
+import 'core/network/connectivity_controller.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/settings_repository.dart';
 import 'data/services/audio_service.dart';
@@ -21,12 +26,41 @@ import 'ui/viewmodels/chat_viewmodel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  await MobileUseAiService.instance.init();
-  SystemChrome.setPreferredOrientations([
+
+  // Avoid red "Error" screens in release builds when a widget throws during
+  // build — show a minimal grey box instead (debug builds still get the full
+  // error details via the default builder).
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    const mode = kReleaseMode;
+    return Material(
+      color: const Color(0xFF121212),
+      child: Center(
+        child: Text(
+          mode ? 'Something went wrong. Please restart the app.' : 'Error: ${details.exception}',
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+      ),
+    );
+  };
+
+  try {
+    await Firebase.initializeApp();
+  } catch (e, s) {
+    // Firebase may fail in offline/dev environments; app continues without it.
+    appLogger.w('Firebase init skipped', error: e, stackTrace: s);
+  }
+  try {
+    await MobileUseAiService.instance.init();
+  } catch (e, s) {
+    appLogger.w('MobileUseAiService init skipped', error: e, stackTrace: s);
+  }
+
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
   runApp(const BeatriceApp());
 }
 
@@ -37,45 +71,70 @@ class BeatriceApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<FirebaseService>(
-          create: (_) => FirebaseService(),
+        // ── Core infrastructure ───────────────────────────────────────
+        ChangeNotifierProvider<ConnectivityController>(
+          create: (_) => ConnectivityController(),
         ),
-        Provider<AuthRepository>(
-          create: (_) => AuthRepository(),
+        ProxyProvider<ConnectivityController, ApiClient>(
+          // Reuse the same ApiClient across rebuilds; keep its connectivity
+          // reference up to date when the controller notifies.
+          update: (context, connectivity, prev) {
+            final api = prev ?? ApiClient();
+            api.connectivity = connectivity;
+            return api;
+          },
         ),
+
+        // ── Data services ─────────────────────────────────────────────
+        Provider<FirebaseService>(create: (_) => FirebaseService()),
+        Provider<AuthRepository>(create: (_) => AuthRepository()),
         ProxyProvider<AuthRepository, AuthUseCase>(
-          update: (context, authRepo, _) => AuthUseCase(authRepo),
+          update: (context, repo, _) => AuthUseCase(repo),
         ),
-        ProxyProvider<AuthUseCase, AuthViewModel>(
-          update: (context, authUseCase, _) => AuthViewModel(authUseCase),
-        ),
-        Provider<SettingsRepository>(
-          create: (_) => SettingsRepository(),
-        ),
+        Provider<SettingsRepository>(create: (_) => SettingsRepository()),
         ProxyProvider<SettingsRepository, SettingsUseCase>(
-          update: (context, settingsRepo, _) => SettingsUseCase(settingsRepo),
+          update: (context, repo, _) => SettingsUseCase(repo),
         ),
-        ProxyProvider<SettingsUseCase, SettingsViewModel>(
-          update: (context, settingsUseCase, _) => SettingsViewModel(settingsUseCase),
+
+        // DeviceControlService now requires an ApiClient (for timeouts /
+        // retries / connectivity). Reuse the instance across rebuilds.
+        ProxyProvider<ApiClient, DeviceControlService>(
+          update: (context, api, prev) => prev ?? DeviceControlService(api),
         ),
-        Provider<DeviceControlService>(
-          create: (_) => DeviceControlService(),
-        ),
-        Provider<MobileUseAiService>(
-          create: (_) => MobileUseAiService.instance,
+        // Inject the shared ApiClient into the MobileUse AI singleton.
+        ProxyProvider<ApiClient, MobileUseAiService>(
+          update: (context, api, prev) {
+            final svc = prev ?? MobileUseAiService.instance;
+            svc.apiClient = api;
+            return svc;
+          },
         ),
         ProxyProvider<DeviceControlService, MobileUseActionHandler>(
           update: (context, deviceControl, _) =>
               MobileUseActionHandler(deviceControl),
         ),
-        Provider<GeminiService>(
-          create: (_) => GeminiService(),
+        Provider<GeminiService>(create: (_) => GeminiService()),
+        Provider<AudioService>(create: (_) => AudioService()),
+
+        // ── View models (ChangeNotifiers with disposal) ───────────────
+        ChangeNotifierProxyProvider<AuthUseCase, AuthViewModel>(
+          create: (context) => AuthViewModel(context.read<AuthUseCase>()),
+          update: (context, authUseCase, prev) => prev ?? AuthViewModel(authUseCase),
         ),
-        Provider<AudioService>(
-          create: (_) => AudioService(),
+        ChangeNotifierProxyProvider<SettingsUseCase, SettingsViewModel>(
+          create: (context) => SettingsViewModel(context.read<SettingsUseCase>()),
+          update: (context, settingsUseCase, prev) =>
+              prev ?? SettingsViewModel(settingsUseCase),
         ),
-        ProxyProvider3<AuthViewModel, SettingsViewModel, GeminiService, ChatViewModel>(
-          update: (context, auth, settings, gemini, _) => ChatViewModel(auth, settings, gemini),
+        ChangeNotifierProxyProvider3<AuthViewModel, SettingsViewModel,
+            GeminiService, ChatViewModel>(
+          create: (context) => ChatViewModel(
+            context.read<AuthViewModel>(),
+            context.read<SettingsViewModel>(),
+            context.read<GeminiService>(),
+          ),
+          update: (context, auth, settings, gemini, prev) =>
+              prev ?? ChatViewModel(auth, settings, gemini),
         ),
       ],
       child: MaterialApp(

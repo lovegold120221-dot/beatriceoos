@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../viewmodels/settings_viewmodel.dart';
+
+import '../../../core/constants.dart';
 import '../../../data/models/template_model.dart';
 import '../../../data/services/mobile_use_ai_service.dart';
+import '../../viewmodels/settings_viewmodel.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -15,17 +17,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoadingFromFirebase = false;
   bool _showDeviceSettings = false;
   bool _showAiSettings = false;
-  late TextEditingController _urlController;
-  late TextEditingController _opencodeUrlController;
-  late TextEditingController _workspaceController;
-  late TextEditingController _adbAddressController;
-  late TextEditingController _adbPortController;
 
-  // MobileUse AI fields
-  String _aiProviderAlias = 'eburon-os';
-  late TextEditingController _aiApiKeyController;
-  late TextEditingController _aiBaseUrlController;
-  late TextEditingController _aiModelController;
+  // Identity controllers (bound to the VM).
+  late final TextEditingController _userNameController;
+  late final TextEditingController _agentNameController;
+
+  // MobileUse AI controllers (bound to the VM's aiEngine).
+  late final TextEditingController _aiApiKeyController;
+  late final TextEditingController _aiBaseUrlController;
+  late final TextEditingController _aiModelController;
+  String _aiProviderAlias = 'eburon';
+
+  // Device-control controllers (bound to the VM's deviceControl).
+  late final TextEditingController _urlController;
+  late final TextEditingController _opencodeUrlController;
+  late final TextEditingController _workspaceController;
 
   static const _aiProviderChips = [
     ('eburon-os', Icons.auto_awesome, Colors.blueAccent),
@@ -38,52 +44,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ('openrouter', Icons.alt_route, Colors.yellowAccent),
   ];
 
+  static const _voices = ['Aoede', 'Charon', 'Fenrir', 'Kore', 'Leda', 'Orus'];
+
   @override
   void initState() {
     super.initState();
-    _urlController = TextEditingController(text: 'http://localhost:5000');
-    _opencodeUrlController =
-        TextEditingController(text: 'http://localhost:5001');
-    _workspaceController =
-        TextEditingController(text: '/storage/shared/MobileUse-Agent');
-    _adbAddressController = TextEditingController();
-    _adbPortController = TextEditingController(text: '5555');
-
+    _userNameController = TextEditingController();
+    _agentNameController = TextEditingController();
     _aiApiKeyController = TextEditingController();
     _aiBaseUrlController = TextEditingController();
     _aiModelController = TextEditingController();
-
+    _urlController = TextEditingController(text: 'http://localhost:5000');
+    _opencodeUrlController = TextEditingController(text: 'http://localhost:5001');
+    _workspaceController =
+        TextEditingController(text: '/storage/shared/MobileUse-Agent');
     _loadSettings();
-    _initAiFromPreset('eburon-os');
-  }
-
-  void _initAiFromPreset(String alias) {
-    final preset = MobileUseAiService.presetFor(alias);
-    setState(() {
-      _aiProviderAlias = preset['alias']!;
-      _aiApiKeyController.text = preset['apiKey']!;
-      _aiBaseUrlController.text = preset['baseUrl']!;
-      _aiModelController.text = preset['model']!;
-    });
   }
 
   Future<void> _loadSettings() async {
     setState(() => _isLoadingFromFirebase = true);
     await context.read<SettingsViewModel>().loadSettings();
+    if (!mounted) return;
+    _syncFromVm();
     setState(() => _isLoadingFromFirebase = false);
+  }
+
+  /// Pull persisted values from the VM into the controllers once (after load).
+  void _syncFromVm() {
+    final vm = context.read<SettingsViewModel>();
+    _userNameController.text = vm.userName;
+    _agentNameController.text = vm.agentName;
+
+    final ai = vm.aiEngine;
+    _aiProviderAlias = ai.alias.isEmpty ? 'eburon' : ai.alias;
+    _aiApiKeyController.text = ai.apiKey;
+    _aiBaseUrlController.text = ai.baseUrl;
+    _aiModelController.text = ai.model;
+
+    final dc = vm.deviceControl;
+    _urlController.text = dc.mobileUseUrl;
+    _opencodeUrlController.text = dc.opencodeUrl;
+    _workspaceController.text = dc.workspacePath;
+  }
+
+  /// Apply a provider preset: update the controllers AND persist into the VM.
+  void _applyPreset(String alias) {
+    final preset = MobileUseAiService.presetFor(alias);
+    final vm = context.read<SettingsViewModel>();
+    setState(() => _aiProviderAlias = preset['alias']!);
+    _aiApiKeyController.text = preset['apiKey']!;
+    _aiBaseUrlController.text = preset['baseUrl']!;
+    _aiModelController.text = preset['model']!;
+    vm.setAiEngine(vm.aiEngine.copyWith(
+      alias: preset['alias']!,
+      baseUrl: preset['baseUrl']!,
+      apiKey: preset['apiKey']!,
+      model: preset['model']!,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<SettingsViewModel>();
-    const voices = [
-      {'name': 'Aoede', 'alias': 'Aoede'},
-      {'name': 'Charon', 'alias': 'Charon'},
-      {'name': 'Fenrir', 'alias': 'Fenrir'},
-      {'name': 'Kore', 'alias': 'Kore'},
-      {'name': 'Leda', 'alias': 'Leda'},
-      {'name': 'Orus', 'alias': 'Orus'},
-    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -104,45 +126,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildDropdown<String>(
                       'Language',
                       vm.language,
-                      [
-                        'English',
-                        'Flemish',
-                        'Spanish',
-                        'French',
-                        'German',
-                        'Japanese',
-                        'Tagalog'
-                      ],
+                      AppConstants.availableLanguages,
                       (v) => vm.setLanguage(v!),
                     ),
                     const SizedBox(height: 12),
                     _buildDropdown<String>(
                       'Voice',
                       vm.voice,
-                      voices.map((v) => v['name'] as String).toList(),
+                      _voices,
                       (v) => vm.setVoice(v!),
                     ),
                     const SizedBox(height: 12),
                     _buildDropdown<String>(
                       'Nuance',
                       vm.nuance,
-                      [
-                        'Casual',
-                        'Professional',
-                        'Friendly',
-                        'Calm',
-                        'Technical',
-                        'Playful'
-                      ],
+                      AppConstants.availableNuances,
                       (v) => vm.setNuance(v!),
                     ),
                   ]),
                   const SizedBox(height: 24),
                   _buildSection('Identity', [
-                    _textField('How to call me', vm.userName, vm.setUserName),
+                    _field(_userNameController, 'How to call me',
+                        onChanged: vm.setUserName),
                     const SizedBox(height: 12),
-                    _textField(
-                        'How to call the Agent', vm.agentName, vm.setAgentName),
+                    _field(_agentNameController, 'How to call the Agent',
+                        onChanged: vm.setAgentName),
                   ]),
                   const SizedBox(height: 24),
                   _buildSection('Template', [
@@ -185,7 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   if (_showAiSettings) ...[
                     const SizedBox(height: 16),
-                    _buildMobileUseAiSettings(),
+                    _buildMobileUseAiSettings(vm),
                   ],
                   const SizedBox(height: 24),
 
@@ -218,7 +226,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   if (_showDeviceSettings) ...[
                     const SizedBox(height: 16),
-                    _buildDeviceSettings(),
+                    _buildDeviceSettings(vm),
                   ],
                   const SizedBox(height: 24),
                   SizedBox(
@@ -232,7 +240,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ? 'Saving...'
                             : vm.saveStatus == 'saved'
                                 ? '✓ Saved'
-                                : '☁ Save Settings',
+                                : vm.saveStatus == 'error'
+                                    ? '⚠ Save failed — retry'
+                                    : '☁ Save Settings',
                       ),
                     ),
                   ),
@@ -242,7 +252,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildMobileUseAiSettings() {
+  Widget _buildMobileUseAiSettings(SettingsViewModel vm) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -271,37 +281,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
             }).toList(),
           ),
           const SizedBox(height: 16),
-          _textField('Base URL', _aiBaseUrlController.text, (v) {
-            _aiBaseUrlController.text = v;
-          }),
+          _field(_aiBaseUrlController, 'Base URL',
+              hint: 'https://api.example.com/v1',
+              onChanged: (v) => vm.setAiEngine(vm.aiEngine.copyWith(baseUrl: v))),
           const SizedBox(height: 12),
-          _textField('API Key', _aiApiKeyController.text, (v) {
-            _aiApiKeyController.text = v;
-          }),
+          _field(_aiApiKeyController, 'API Key',
+              hint: 'sk-...', obscure: true,
+              onChanged: (v) => vm.setAiEngine(vm.aiEngine.copyWith(apiKey: v))),
+          const SizedBox(height: 12),
+          _field(_aiModelController, 'Model',
+              hint: 'model-name',
+              onChanged: (v) => vm.setAiEngine(vm.aiEngine.copyWith(model: v))),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             key: ValueKey('provider_alias_$_aiProviderAlias'),
             initialValue: _aiProviderAlias,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               labelText: 'Provider Alias',
-              labelStyle: const TextStyle(fontSize: 12, color: Colors.grey),
+              labelStyle: TextStyle(fontSize: 12, color: Colors.grey),
               filled: true,
-              fillColor: const Color(0xFF0F172A),
+              fillColor: Color(0xFF0F172A),
             ),
             dropdownColor: const Color(0xFF16213E),
             style: const TextStyle(color: Colors.white, fontSize: 13),
             items: _aiProviderChips.map((c) {
               final (alias, _, _) = c;
-              return DropdownMenuItem<String>(
-                value: alias,
-                child: Text(alias),
-              );
+              return DropdownMenuItem<String>(value: alias, child: Text(alias));
             }).toList(),
             onChanged: (val) {
-              if (val != null) {
-                setState(() => _aiProviderAlias = val);
-                _initAiFromPreset(val);
-              }
+              if (val != null) _applyPreset(val);
             },
           ),
           const SizedBox(height: 12),
@@ -330,12 +338,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _providerChip(
-      String alias, IconData icon, Color color) {
+  Widget _providerChip(String alias, IconData icon, Color color) {
     final isActive = _aiProviderAlias == alias;
     return ActionChip(
-      avatar: Icon(icon,
-          size: 16, color: isActive ? Colors.white : color),
+      avatar: Icon(icon, size: 16, color: isActive ? Colors.white : color),
       label: Text(
         alias,
         style: TextStyle(
@@ -347,14 +353,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? color.withValues(alpha: 0.3)
           : Colors.white.withValues(alpha: 0.08),
       side: BorderSide(color: isActive ? color : Colors.white12),
-      onPressed: () {
-        setState(() => _aiProviderAlias = alias);
-        _initAiFromPreset(alias);
-      },
+      onPressed: () => _applyPreset(alias),
     );
   }
 
-  Widget _buildDeviceSettings() {
+  Widget _buildDeviceSettings(SettingsViewModel vm) {
+    final dc = vm.deviceControl;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -366,36 +370,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _textField('MobileUse Server URL', _urlController.text, (v) {
-            _urlController.text = v;
-          }, hint: 'http://localhost:5000'),
+          _field(_urlController, 'MobileUse Server URL',
+              hint: 'http://localhost:5000',
+              onChanged: (v) =>
+                  vm.setDeviceControl(dc.copyWith(mobileUseUrl: v))),
           const SizedBox(height: 12),
-          _textField('Opencode CLI URL', _opencodeUrlController.text, (v) {
-            _opencodeUrlController.text = v;
-          }, hint: 'http://localhost:5001'),
+          _field(_opencodeUrlController, 'Opencode CLI URL',
+              hint: 'http://localhost:5001',
+              onChanged: (v) =>
+                  vm.setDeviceControl(dc.copyWith(opencodeUrl: v))),
           const SizedBox(height: 12),
-          _textField('Workspace Path', _workspaceController.text, (v) {
-            _workspaceController.text = v;
-          }, hint: '/storage/shared/MobileUse-Agent'),
+          _field(_workspaceController, 'Workspace Path',
+              hint: '/storage/shared/MobileUse-Agent',
+              onChanged: (v) =>
+                  vm.setDeviceControl(dc.copyWith(workspacePath: v))),
           const SizedBox(height: 16),
           const Divider(color: Colors.white12),
           const SizedBox(height: 8),
-          _toggleTile('ADB (Android Debug Bridge)', true, (_) {}),
+          _toggleTile('ADB (Android Debug Bridge)', dc.adbEnabled, (v) =>
+              vm.setDeviceControl(dc.copyWith(adbEnabled: v))),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.only(left: 24),
             child: Column(
               children: [
-                _toggleTile('ADB Root Mode', false, (_) {}),
+                _toggleTile('ADB Root Mode', dc.adbRootEnabled, (v) =>
+                    vm.setDeviceControl(dc.copyWith(adbRootEnabled: v))),
                 const SizedBox(height: 4),
-                _toggleTile('ADB over TCP/IP', false, (_) {}),
+                _toggleTile('ADB over TCP/IP', dc.adbRootEnabled, (v) =>
+                    vm.setDeviceControl(dc.copyWith(adbRootEnabled: v))),
               ],
             ),
           ),
           const SizedBox(height: 4),
-          _toggleTile('Shizuku (ADB Alternative)', false, (_) {}),
+          _toggleTile('Shizuku (ADB Alternative)', dc.shizukuEnabled, (v) =>
+              vm.setDeviceControl(dc.copyWith(shizukuEnabled: v))),
           const SizedBox(height: 4),
-          _toggleTile('Accessibility Service', false, (_) {}),
+          _toggleTile('Accessibility Service', dc.accessibilityServiceEnabled,
+              (v) =>
+                  vm.setDeviceControl(dc.copyWith(accessibilityServiceEnabled: v))),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(12),
@@ -447,7 +460,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _toggleTile(String label, bool value, Function(bool) onChanged) {
+  Widget _toggleTile(String label, bool value, ValueChanged<bool> onChanged) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -459,17 +472,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(0xFF00D4AA),
+            activeTrackColor: const Color(0xFF00D4AA),
           ),
         ),
       ],
     );
   }
 
-  Widget _textField(String label, String value, Function(String) onChanged,
-      {String? hint}) {
+  /// A text field bound to a stable [controller] (created in [initState]).
+  /// Previously a fresh `TextEditingController` was constructed on every build,
+  /// which lost focus/cursor state and never wrote back to the VM.
+  Widget _field(TextEditingController controller, String label,
+      {String? hint, bool obscure = false, ValueChanged<String>? onChanged}) {
     return TextField(
-      controller: TextEditingController(text: value),
+      controller: controller,
+      obscureText: obscure,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -507,6 +524,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String? Function(T?)? labelBuilder,
   }) {
     return DropdownButtonFormField<T>(
+      key: ValueKey('$label:$value'),
       initialValue: value,
       items: items.map((item) {
         return DropdownMenuItem(
@@ -523,11 +541,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
+    _userNameController.dispose();
+    _agentNameController.dispose();
+    _aiApiKeyController.dispose();
+    _aiBaseUrlController.dispose();
+    _aiModelController.dispose();
     _urlController.dispose();
     _opencodeUrlController.dispose();
     _workspaceController.dispose();
-    _adbAddressController.dispose();
-    _adbPortController.dispose();
     super.dispose();
   }
 }

@@ -1,7 +1,20 @@
-import 'dart:convert';
-import 'dart:io';
+import '../../core/errors/app_exception.dart';
+import '../../core/logger.dart';
+import '../../core/network/api_client.dart';
+import '../repositories/settings_repository.dart';
 
+/// HTTP bridge to the local MobileUse device-control server.
+///
+/// Now routes through the shared [ApiClient] (dio) so every call gets
+/// timeouts, retries on transient failures, connectivity fast-fail, and
+/// centralized logging — instead of a new `dart:io HttpClient` per call with
+/// no timeout and silently-swallowed errors.
 class DeviceControlService {
+  DeviceControlService(this._api, {String baseUrl = 'http://localhost:5000', String opencodeUrl = 'http://localhost:5001'})
+      : _baseUrl = baseUrl,
+        _opencodeUrl = opencodeUrl;
+
+  final ApiClient _api;
   String _baseUrl;
   String _opencodeUrl;
   bool _connected = false;
@@ -13,10 +26,6 @@ class DeviceControlService {
   bool _shizukuEnabled = false;
   bool _accessibilityEnabled = false;
   String _workspacePath = '/storage/shared/MobileUse-Agent';
-
-  DeviceControlService({String baseUrl = 'http://localhost:5000', String opencodeUrl = 'http://localhost:5001'})
-      : _baseUrl = baseUrl,
-        _opencodeUrl = opencodeUrl;
 
   bool get isConnected => _connected;
   String get baseUrl => _baseUrl;
@@ -41,6 +50,17 @@ class DeviceControlService {
   void setAccessibilityEnabled(bool v) => _accessibilityEnabled = v;
   void setWorkspacePath(String v) => _workspacePath = v;
 
+  /// Apply persisted device-control settings.
+  void applySettings(DeviceControlSettings settings) {
+    _baseUrl = settings.mobileUseUrl;
+    _opencodeUrl = settings.opencodeUrl;
+    _workspacePath = settings.workspacePath;
+    _adbEnabled = settings.adbEnabled;
+    _adbRootEnabled = settings.adbRootEnabled;
+    _shizukuEnabled = settings.shizukuEnabled;
+    _accessibilityEnabled = settings.accessibilityServiceEnabled;
+  }
+
   Map<String, dynamic> toJson() => {
         'baseUrl': _baseUrl,
         'opencodeUrl': _opencodeUrl,
@@ -56,12 +76,11 @@ class DeviceControlService {
 
   Future<bool> connect() async {
     try {
-      final client = HttpClient();
-      final request = await client.getUrl(Uri.parse('$_baseUrl/health'));
-      final response = await request.close();
+      final response = await _api.get<Map<String, dynamic>>('$_baseUrl/health');
       _connected = response.statusCode == 200;
       return _connected;
-    } catch (_) {
+    } catch (e, s) {
+      appLogger.w('DeviceControl connect failed', error: e, stackTrace: s);
       _connected = false;
       return false;
     }
@@ -73,112 +92,85 @@ class DeviceControlService {
 
   Future<Map<String, dynamic>> getDeviceInfo() async {
     try {
-      final client = HttpClient();
-      final request = await client.getUrl(Uri.parse('$_baseUrl/health'));
-      final response = await request.close();
-      if (response.statusCode == 200) {
-        final body = await response.transform(utf8.decoder).join();
-        return json.decode(body) as Map<String, dynamic>;
+      final response = await _api.get<Map<String, dynamic>>('$_baseUrl/health');
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
       }
-    } catch (_) {}
+    } catch (e, s) {
+      appLogger.w('DeviceControl getDeviceInfo failed', error: e, stackTrace: s);
+    }
     return {};
   }
 
-  Future<Map<String, dynamic>> executeTermuxCommand(String cmd) async {
-    return executeAction('execute_command', {'cmd': cmd});
-  }
+  Future<Map<String, dynamic>> executeTermuxCommand(String cmd) =>
+      executeAction('execute_command', {'cmd': cmd});
 
-  Future<Map<String, dynamic>> tap(int x, int y) async {
-    return executeAction('tap', {'x': x, 'y': y});
-  }
+  Future<Map<String, dynamic>> tap(int x, int y) =>
+      executeAction('tap', {'x': x, 'y': y});
 
-  Future<Map<String, dynamic>> swipe(int x1, int y1, int x2, int y2, {int? duration}) async {
-    return executeAction('swipe', {
-      'x1': x1,
-      'y1': y1,
-      'x2': x2,
-      'y2': y2,
-      'duration': duration ?? 300,
-    });
-  }
+  Future<Map<String, dynamic>> swipe(int x1, int y1, int x2, int y2, {int? duration}) =>
+      executeAction('swipe', {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'duration': duration ?? 300});
 
-  Future<Map<String, dynamic>> typeText(String text) async {
-    return executeAction('type_text', {'text': text});
-  }
+  Future<Map<String, dynamic>> typeText(String text) =>
+      executeAction('type_text', {'text': text});
 
-  Future<Map<String, dynamic>> launchApp(String packageName) async {
-    return executeAction('launch_app', {'packageName': packageName});
-  }
+  Future<Map<String, dynamic>> launchApp(String packageName) =>
+      executeAction('launch_app', {'packageName': packageName});
 
-  Future<Map<String, dynamic>> takeScreenshot({bool saveToWorkspace = false}) async {
-    return executeAction('take_screenshot', {'saveToWorkspace': saveToWorkspace});
-  }
+  Future<Map<String, dynamic>> takeScreenshot({bool saveToWorkspace = false}) =>
+      executeAction('take_screenshot', {'saveToWorkspace': saveToWorkspace});
 
-  Future<Map<String, dynamic>> getUiLayout() async {
-    return executeAction('get_ui_layout', {});
-  }
+  Future<Map<String, dynamic>> getUiLayout() => executeAction('get_ui_layout', {});
 
-  Future<Map<String, dynamic>> getInstalledApps({bool userOnly = true}) async {
-    return executeAction('get_installed_apps', {'userOnly': userOnly});
-  }
+  Future<Map<String, dynamic>> getInstalledApps({bool userOnly = true}) =>
+      executeAction('get_installed_apps', {'userOnly': userOnly});
 
-  Future<Map<String, dynamic>> goHome() async {
-    return executeAction('go_home', {});
-  }
+  Future<Map<String, dynamic>> goHome() => executeAction('go_home', {});
 
-  Future<Map<String, dynamic>> goBack() async {
-    return executeAction('go_back', {});
-  }
+  Future<Map<String, dynamic>> goBack() => executeAction('go_back', {});
 
-  Future<Map<String, dynamic>> openUrl(String url) async {
-    return executeAction('open_url', {'url': url});
-  }
+  Future<Map<String, dynamic>> openUrl(String url) =>
+      executeAction('open_url', {'url': url});
 
-  Future<Map<String, dynamic>> setBrightness(int level) async {
-    return executeAction('set_brightness', {'level': level});
-  }
+  Future<Map<String, dynamic>> setBrightness(int level) =>
+      executeAction('set_brightness', {'level': level});
 
-  Future<Map<String, dynamic>> setVolume(String stream, int level) async {
-    return executeAction('set_volume', {'stream': stream, 'level': level});
-  }
+  Future<Map<String, dynamic>> setVolume(String stream, int level) =>
+      executeAction('set_volume', {'stream': stream, 'level': level});
 
-  Future<Map<String, dynamic>> getClipboard() async {
-    return executeAction('get_clipboard', {});
-  }
+  Future<Map<String, dynamic>> getClipboard() => executeAction('get_clipboard', {});
 
-  Future<Map<String, dynamic>> setClipboard(String text) async {
-    return executeAction('set_clipboard', {'text': text});
-  }
+  Future<Map<String, dynamic>> setClipboard(String text) =>
+      executeAction('set_clipboard', {'text': text});
 
-  Future<Map<String, dynamic>> notify(String title, String message) async {
-    return executeAction('notify', {'title': title, 'message': message});
-  }
+  Future<Map<String, dynamic>> notify(String title, String message) =>
+      executeAction('notify', {'title': title, 'message': message});
 
-  Future<Map<String, dynamic>> getScreenSize() async {
-    return executeAction('get_screen_size', {});
-  }
+  Future<Map<String, dynamic>> getScreenSize() => executeAction('get_screen_size', {});
 
   /// Execute a raw action on the device control server.
-  /// Public so task_router.dart and other services can access it.
+  /// Public so [task_router.dart] and other services can access it.
   Future<Map<String, dynamic>> executeAction(String action, Map<String, dynamic> request) async {
     if (!_connected) {
       return {'success': false, 'error': 'Device control bridge is not connected'};
     }
-
     try {
-      final client = HttpClient();
-      final req = await client.postUrl(Uri.parse('$_baseUrl/execute'));
-      req.headers.contentType = ContentType.json;
-      req.add(utf8.encode(json.encode({
-        'action': action,
-        'request': request,
-        'workspacePath': _workspacePath,
-      })));
-      final response = await req.close();
-      final body = await response.transform(utf8.decoder).join();
-      final data = json.decode(body);
-      return Map<String, dynamic>.from(data);
-    } catch (e) {
+      final response = await _api.post<Map<String, dynamic>>(
+        '$_baseUrl/execute',
+        body: {
+          'action': action,
+          'request': request,
+          'workspacePath': _workspacePath,
+        },
+      );
+      final data = response.data;
+      if (data != null) return Map<String, dynamic>.from(data);
+      return {'success': false, 'error': 'Unexpected response: $data'};
+    } on AppException catch (e) {
+      appLogger.w('DeviceControl executeAction failed: ${e.message}', error: e);
+      return {'success': false, 'error': e.message};
+    } catch (e, s) {
+      appLogger.w('DeviceControl executeAction failed', error: e, stackTrace: s);
       return {'success': false, 'error': e.toString()};
     }
   }

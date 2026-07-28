@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/logger.dart';
+
 enum FunctionResponseScheduling { interrupt, parallel }
 
 class FunctionCall extends Equatable {
@@ -30,6 +32,35 @@ class FunctionCall extends Equatable {
       parameters: parameters ?? this.parameters,
       isEnabled: isEnabled ?? this.isEnabled,
       scheduling: scheduling ?? this.scheduling,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'description': description,
+        'parameters': parameters,
+        'isEnabled': isEnabled,
+        'scheduling': scheduling.name,
+      };
+
+  factory FunctionCall.fromJson(Map<String, dynamic> json) {
+    FunctionResponseScheduling scheduling = FunctionResponseScheduling.interrupt;
+    final raw = json['scheduling'];
+    if (raw is String) {
+      try {
+        scheduling = FunctionResponseScheduling.values.byName(raw);
+      } catch (e, s) {
+        appLogger.w('Unknown FunctionResponseScheduling "$raw", defaulting to interrupt',
+            error: e, stackTrace: s);
+      }
+    }
+    final params = json['parameters'];
+    return FunctionCall(
+      name: (json['name'] as String?) ?? 'unknown',
+      description: json['description'] as String?,
+      parameters: params is Map<String, dynamic> ? params : null,
+      isEnabled: (json['isEnabled'] as bool?) ?? true,
+      scheduling: scheduling,
     );
   }
 

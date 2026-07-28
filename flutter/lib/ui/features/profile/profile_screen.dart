@@ -28,15 +28,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final file = File('${dir.path}/beatrice_avatar.txt');
       if (await file.exists()) {
         final data = await file.readAsString();
+        if (!mounted) return;
         setState(() => _avatarBase64 = data);
       }
-    } catch (_) {}
+    } catch (e, s) {
+      // Swallow — avatar is non-critical. Logged elsewhere if needed.
+      debugPrint('Avatar load failed: $e\n$s');
+    }
   }
 
   Future<void> _pickAndSaveAvatar() async {
-    // This method is already async
-    // For mobile, we'd use image_picker package
-    // For now, show a dialog explaining how to set avatar
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Avatar upload coming soon — add image_picker package'),
@@ -52,14 +54,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (await file.exists()) {
         await file.delete();
       }
+      if (!mounted) return;
       setState(() => _avatarBase64 = null);
-    } catch (_) {}
+    } catch (e, s) {
+      debugPrint('Avatar remove failed: $e\n$s');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final authViewModel = context.watch<AuthViewModel>();
     final user = authViewModel.user;
+    final avatarImage = _decodeAvatar(_avatarBase64);
 
     return Scaffold(
       appBar: AppBar(
@@ -83,10 +89,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         CircleAvatar(
                           radius: 48,
                           backgroundColor: const Color(0xFF00D4AA),
-                          backgroundImage: _avatarBase64 != null
-                              ? MemoryImage(base64Decode(_avatarBase64!))
-                              : null,
-                          child: _avatarBase64 == null
+                          backgroundImage: avatarImage,
+                          child: avatarImage == null
                               ? Text(
                                   _getInitials(
                                       user?.displayName ?? user?.email ?? 'U'),
@@ -272,10 +276,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+/// Decode a stored base64 avatar into a [MemoryImage], returning null if the
+/// data is missing or corrupt (instead of crashing the build).
+MemoryImage? _decodeAvatar(String? base64) {
+  if (base64 == null || base64.isEmpty) return null;
+  try {
+    return MemoryImage(base64Decode(base64));
+  } catch (e, s) {
+    debugPrint('Avatar base64 decode failed: $e\n$s');
+    return null;
+  }
+}
+
 String _getInitials(String? name) {
-  if (name == null || name.isEmpty) return 'U';
-  final names = name.split(' ');
-  if (names.length == 1) return names[0].substring(0, 1).toUpperCase();
+  final trimmed = name?.trim();
+  if (trimmed == null || trimmed.isEmpty) return 'U';
+  final names = trimmed.split(RegExp(r'\s+')).where((n) => n.isNotEmpty).toList();
+  if (names.isEmpty) return 'U';
+  if (names.length == 1) {
+    return names[0].substring(0, 1).toUpperCase();
+  }
   return names[0].substring(0, 1).toUpperCase() +
       names[names.length - 1].substring(0, 1).toUpperCase();
 }
