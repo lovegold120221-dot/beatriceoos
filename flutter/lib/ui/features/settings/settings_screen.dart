@@ -5,7 +5,8 @@ import '../../../core/constants.dart';
 import '../../../core/theme.dart';
 import '../../../data/models/function_call_model.dart';
 import '../../../data/models/template_model.dart';
-import '../../../data/repositories/settings_repository.dart' show DeviceControlSettings;
+import '../../../data/repositories/settings_repository.dart'
+    show DeviceControlSettings;
 import '../../../data/services/device_control_service.dart';
 import '../../../data/services/mobile_use_ai_service.dart';
 import '../../../data/services/screen_automation_service.dart';
@@ -73,7 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _aiApiKeyController = TextEditingController();
     _aiBaseUrlController = TextEditingController();
     _aiModelController = TextEditingController();
-    _urlController = TextEditingController(text: 'http://localhost:4096');
+    _urlController = TextEditingController(text: 'http://127.0.0.1:4096');
     _workspaceController =
         TextEditingController(text: '/storage/shared/opencode');
     _adbAddressController = TextEditingController();
@@ -195,12 +196,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   // ─── Identity ───
                   _buildSection('Identity', [
                     _field(_userNameController, 'How to call me',
-                        hint: 'Boss',
-                        onChanged: vm.setUserName),
+                        hint: 'Boss', onChanged: vm.setUserName),
                     const SizedBox(height: 12),
                     _field(_agentNameController, 'How to call the Agent',
-                        hint: 'Beatrice',
-                        onChanged: vm.setAgentName),
+                        hint: 'Beatrice', onChanged: vm.setAgentName),
                   ]),
                   const SizedBox(height: 24),
 
@@ -259,9 +258,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         ),
                         const Spacer(),
                         Icon(
-                          _showTools
-                              ? Icons.expand_less
-                              : Icons.expand_more,
+                          _showTools ? Icons.expand_less : Icons.expand_more,
                           color: Colors.grey,
                         ),
                       ],
@@ -279,8 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         setState(() => _showAiSettings = !_showAiSettings),
                     child: Row(
                       children: [
-                        const Icon(Icons.psychology,
-                            color: Color(0xFF00D4AA)),
+                        const Icon(Icons.psychology, color: Color(0xFF00D4AA)),
                         const SizedBox(width: 8),
                         const Text(
                           'MobileUse AI Engine',
@@ -386,8 +382,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               label: const Text('Add function call',
                   style: TextStyle(fontSize: 13)),
               style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                    color: AppTheme.primary.withValues(alpha: 0.4)),
+                side:
+                    BorderSide(color: AppTheme.primary.withValues(alpha: 0.4)),
               ),
             ),
           ),
@@ -448,8 +444,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       decoration: BoxDecoration(
         color: AppTheme.surfaceElevated,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: AppTheme.primary.withValues(alpha: 0.2)),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -477,14 +472,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                   vm.setAiEngine(vm.aiEngine.copyWith(baseUrl: v))),
           const SizedBox(height: 12),
           _field(_aiApiKeyController, 'API Key',
-              hint: 'sk-...', obscure: true,
+              hint: 'sk-...',
+              obscure: true,
               onChanged: (v) =>
                   vm.setAiEngine(vm.aiEngine.copyWith(apiKey: v))),
           const SizedBox(height: 12),
           _field(_aiModelController, 'Model',
               hint: 'model-name',
-              onChanged: (v) =>
-                  vm.setAiEngine(vm.aiEngine.copyWith(model: v))),
+              onChanged: (v) => vm.setAiEngine(vm.aiEngine.copyWith(model: v))),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             key: ValueKey('provider_alias_$_aiProviderAlias'),
@@ -499,8 +494,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             style: const TextStyle(color: Colors.white, fontSize: 13),
             items: _aiProviderChips.map((c) {
               final (alias, _, _) = c;
-              return DropdownMenuItem<String>(
-                  value: alias, child: Text(alias));
+              return DropdownMenuItem<String>(value: alias, child: Text(alias));
             }).toList(),
             onChanged: (val) {
               if (val != null) _applyPreset(val);
@@ -521,8 +515,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(width: 8),
                 Text(
                   'Active: $_aiProviderAlias',
-                  style: const TextStyle(
-                      fontSize: 12, color: Color(0xFF00D4AA)),
+                  style:
+                      const TextStyle(fontSize: 12, color: Color(0xFF00D4AA)),
                 ),
               ],
             ),
@@ -562,15 +556,14 @@ class _SettingsScreenState extends State<SettingsScreen>
       decoration: BoxDecoration(
         color: AppTheme.surfaceElevated,
         borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Server URL ──
           _field(_urlController, 'Opencode Server URL',
-              hint: 'http://localhost:4096',
+              hint: 'http://127.0.0.1:4096',
               onChanged: (v) =>
                   vm.setDeviceControl(dc.copyWith(mobileUseUrl: v))),
           const SizedBox(height: 12),
@@ -596,8 +589,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           const SizedBox(height: 8),
 
           // ── ADB Toggles ──
-          _toggleTile('ADB (Android Debug Bridge)', dc.adbEnabled, (v) =>
-              vm.setDeviceControl(dc.copyWith(adbEnabled: v))),
+          _toggleTile('ADB (Android Debug Bridge)', dc.adbEnabled,
+              (v) => vm.setDeviceControl(dc.copyWith(adbEnabled: v))),
           const SizedBox(height: 4),
 
           if (dc.adbEnabled) ...[
@@ -605,11 +598,13 @@ class _SettingsScreenState extends State<SettingsScreen>
               padding: const EdgeInsets.only(left: 24),
               child: Column(
                 children: [
-                  _toggleTile('ADB Root Mode', dc.adbRootEnabled, (v) =>
-                      vm.setDeviceControl(dc.copyWith(adbRootEnabled: v))),
-                  const SizedBox(height: 4),
                   _toggleTile(
-                      'ADB over TCP/IP', dc.adbTcpIpEnabled, (v) {
+                      'ADB Root Mode',
+                      dc.adbRootEnabled,
+                      (v) =>
+                          vm.setDeviceControl(dc.copyWith(adbRootEnabled: v))),
+                  const SizedBox(height: 4),
+                  _toggleTile('ADB over TCP/IP', dc.adbTcpIpEnabled, (v) {
                     vm.setDeviceControl(dc.copyWith(adbTcpIpEnabled: v));
                     // Sync controllers with VM.
                     _adbAddressController.text = dc.adbTcpIpAddress;
@@ -622,24 +617,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                       child: Row(
                         children: [
                           Expanded(
-                            child: _field(
-                                _adbAddressController, 'IP Address',
+                            child: _field(_adbAddressController, 'IP Address',
                                 hint: '192.168.1.x',
                                 onChanged: (v) => vm.setDeviceControl(
                                     dc.copyWith(adbTcpIpAddress: v))),
                           ),
                           Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
                             child: Text(':',
                                 style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 16)),
+                                    color: Colors.grey[500], fontSize: 16)),
                           ),
                           SizedBox(
                             width: 80,
-                            child: _field(
-                                _adbPortController, 'Port',
+                            child: _field(_adbPortController, 'Port',
                                 hint: '5555',
                                 onChanged: (v) => vm.setDeviceControl(
                                     dc.copyWith(adbTcpIpPort: v))),
@@ -654,8 +645,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
 
           const SizedBox(height: 4),
-          _toggleTile('Shizuku (ADB Alternative)', dc.shizukuEnabled, (v) =>
-              vm.setDeviceControl(dc.copyWith(shizukuEnabled: v))),
+          _toggleTile('Shizuku (ADB Alternative)', dc.shizukuEnabled,
+              (v) => vm.setDeviceControl(dc.copyWith(shizukuEnabled: v))),
           const SizedBox(height: 8),
 
           const Divider(color: Colors.white12),
@@ -693,9 +684,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              isConnected
-                  ? 'Opencode Connected'
-                  : 'Opencode Disconnected',
+              isConnected ? 'Opencode Connected' : 'Opencode Disconnected',
               style: TextStyle(
                 fontSize: 12,
                 color: isConnected
@@ -709,18 +698,16 @@ class _SettingsScreenState extends State<SettingsScreen>
             child: OutlinedButton(
               onPressed: _psConnecting ? null : _handleTestConnection,
               style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                    color: AppTheme.primary.withValues(alpha: 0.5)),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12),
+                side:
+                    BorderSide(color: AppTheme.primary.withValues(alpha: 0.5)),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 textStyle: const TextStyle(fontSize: 12),
               ),
               child: _psConnecting
                   ? const SizedBox(
                       width: 14,
                       height: 14,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : Text(isConnected ? 'Reconnect' : 'Connect'),
             ),
@@ -776,18 +763,14 @@ class _SettingsScreenState extends State<SettingsScreen>
             const SizedBox(height: 6),
             Text(
               'Stop the conflicting service or change the MobileUse Server URL to a different port.',
-              style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey[500]),
+              style: TextStyle(fontSize: 10, color: Colors.grey[500]),
             ),
           ],
           if (isUnreachable) ...[
             const SizedBox(height: 6),
             Text(
               'Make sure Opencode is running in your Proot distro and accessible (port 4096). Run: proot-distro login ubuntu && opencode server',
-              style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey[500]),
+              style: TextStyle(fontSize: 10, color: Colors.grey[500]),
             ),
           ],
         ],
@@ -820,20 +803,15 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
           ),
           const SizedBox(height: 6),
-          _permissionItem(
-              'Termux:API (F-Droid) — SMS, calls, camera, sensors'),
-          _permissionItem(
-              'ADB or Shizuku — Screen tap, swipe, app launch'),
-          _permissionItem(
-              'Storage Access — File read/write in workspace'),
+          _permissionItem('Termux:API (F-Droid) — SMS, calls, camera, sensors'),
+          _permissionItem('ADB or Shizuku — Screen tap, swipe, app launch'),
+          _permissionItem('Storage Access — File read/write in workspace'),
           if (adbRootEnabled)
             _permissionItem('ADB Root — System-level operations'),
           if (adbTcpIpEnabled)
-            _permissionItem(
-                'ADB TCP/IP — Connect over network'),
+            _permissionItem('ADB TCP/IP — Connect over network'),
           if (accessibilityServiceEnabled)
-            _permissionItem(
-                'Accessibility Service — UI element inspection'),
+            _permissionItem('Accessibility Service — UI element inspection'),
           if (shizukuEnabled)
             _permissionItem(
                 'Shizuku — Grant via Shizuku app for ADB-level access without PC'),
@@ -944,8 +922,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           width: double.infinity,
           height: 50,
           child: ElevatedButton(
-            onPressed:
-                vm.saveStatus == 'saving' ? null : vm.saveSettings,
+            onPressed: vm.saveStatus == 'saving' ? null : vm.saveSettings,
             child: Text(
               vm.saveStatus == 'saving'
                   ? 'Saving to Firebase...'
@@ -961,8 +938,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           const SizedBox(height: 8),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-                horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: vm.saveStatus == 'saved'
                   ? const Color(0xFFa4e776).withValues(alpha: 0.1)
@@ -975,8 +951,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ? const Color(0xFFa4e776).withValues(alpha: 0.3)
                     : vm.saveStatus == 'error'
                         ? Colors.red.withValues(alpha: 0.3)
-                        : const Color(0xFF00D4AA)
-                            .withValues(alpha: 0.3),
+                        : const Color(0xFF00D4AA).withValues(alpha: 0.3),
               ),
             ),
             child: Text(
@@ -1016,7 +991,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   /// Show a dialog to edit a tool's properties.
-  Future<void> _showToolEditDialog(SettingsViewModel vm, String toolName) async {
+  Future<void> _showToolEditDialog(
+      SettingsViewModel vm, String toolName) async {
     final tool = vm.getTool(toolName);
     if (tool == null) return;
 
@@ -1074,10 +1050,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
 
     if (result != null) {
-      vm.updateTool(toolName, tool.copyWith(
-        name: result['name'] as String? ?? tool.name,
-        description: result['description'] as String? ?? tool.description,
-      ));
+      vm.updateTool(
+          toolName,
+          tool.copyWith(
+            name: result['name'] as String? ?? tool.name,
+            description: result['description'] as String? ?? tool.description,
+          ));
     }
 
     nameController.dispose();

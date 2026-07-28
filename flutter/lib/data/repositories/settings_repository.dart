@@ -63,7 +63,8 @@ class SettingsRepository {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is Map<String, dynamic>) return decoded;
-      appLogger.w('Settings blob was not a JSON object: ${decoded.runtimeType}');
+      appLogger
+          .w('Settings blob was not a JSON object: ${decoded.runtimeType}');
       return null;
     } catch (e, s) {
       appLogger.w('Failed to decode settings, discarding corrupt blob',
@@ -114,7 +115,8 @@ class AiEngineSettings {
     this.disableMaxSteps = false,
   });
 
-  factory AiEngineSettings.fromJson(Map<String, dynamic> json) => AiEngineSettings(
+  factory AiEngineSettings.fromJson(Map<String, dynamic> json) =>
+      AiEngineSettings(
         alias: (json['alias'] as String?) ?? '',
         baseUrl: (json['baseUrl'] as String?) ?? '',
         apiKey: (json['apiKey'] as String?) ?? '',
@@ -171,7 +173,7 @@ class DeviceControlSettings {
   final bool accessibilityServiceEnabled;
 
   const DeviceControlSettings({
-    this.mobileUseUrl = 'http://localhost:4096',
+    this.mobileUseUrl = 'http://127.0.0.1:4096',
     this.workspacePath = '/storage/shared/opencode',
     this.adbEnabled = true,
     this.adbRootEnabled = false,
@@ -184,15 +186,18 @@ class DeviceControlSettings {
 
   factory DeviceControlSettings.fromJson(Map<String, dynamic> json) =>
       DeviceControlSettings(
-        mobileUseUrl: (json['mobileUseUrl'] as String?) ?? 'http://localhost:4096',
-        workspacePath: (json['workspacePath'] as String?) ?? '/storage/shared/opencode',
+        mobileUseUrl:
+            (json['mobileUseUrl'] as String?) ?? 'http://127.0.0.1:4096',
+        workspacePath:
+            (json['workspacePath'] as String?) ?? '/storage/shared/opencode',
         adbEnabled: (json['adbEnabled'] as bool?) ?? true,
         adbRootEnabled: (json['adbRootEnabled'] as bool?) ?? false,
         adbTcpIpEnabled: (json['adbTcpIpEnabled'] as bool?) ?? false,
         adbTcpIpAddress: (json['adbTcpIpAddress'] as String?) ?? '',
         adbTcpIpPort: (json['adbTcpIpPort'] as String?) ?? '5555',
         shizukuEnabled: (json['shizukuEnabled'] as bool?) ?? false,
-        accessibilityServiceEnabled: (json['accessibilityServiceEnabled'] as bool?) ?? false,
+        accessibilityServiceEnabled:
+            (json['accessibilityServiceEnabled'] as bool?) ?? false,
       );
 
   Map<String, dynamic> toJson() => {

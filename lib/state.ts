@@ -91,7 +91,7 @@ export const useDeviceControl = create<{
   setAccessibilityServiceEnabled: (enabled: boolean) => void;
   setWorkspacePath: (path: string) => void;
 }>(set => ({
-  mobileUseUrl: 'http://localhost:4096',
+  mobileUseUrl: 'http://127.0.0.1:4096',
   mobileUseConnected: false,
   adbEnabled: true,
   adbRootEnabled: false,

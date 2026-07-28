@@ -33,7 +33,7 @@ class MobileUseBridge {
   private workspacePath: string = '/storage/shared/opencode';
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || 'http://localhost:4096';
+    this.baseUrl = baseUrl || 'http://127.0.0.1:4096';
   }
 
   setBaseUrl(url: string): void {

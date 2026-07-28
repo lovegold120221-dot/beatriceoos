@@ -56,7 +56,7 @@ class MobileUseAiService {
   static const String ollamaBaseUrl = 'http://localhost:11434/v1';
   static const String ollamaDefaultModel = 'gemma3:4b';
 
-  static const String opencodeBaseUrl = 'http://localhost:4096/v1';
+  static const String opencodeBaseUrl = 'http://127.0.0.1:4096/v1';
   static const String opencodeDefaultModel = 'deepseek-chat';
 
   static const String geminiBaseUrl =
@@ -100,7 +100,9 @@ class MobileUseAiService {
 
   static List<String> filterNvidiaFreeModels(Iterable<String> models) {
     final availableModels = models.toSet();
-    return nvidiaFreeChatModels.where(availableModels.contains).toList(growable: false);
+    return nvidiaFreeChatModels
+        .where(availableModels.contains)
+        .toList(growable: false);
   }
 
   // ─── Instance State ──────────────────────────────────────────────
@@ -167,7 +169,8 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
     _disableMaxSteps = prefs.getBool('mobile_use_disable_max_steps') ?? false;
     _temperature = prefs.getDouble('mobile_use_temperature') ?? 1.0;
     _maxTokens = prefs.getInt('mobile_use_max_tokens') ?? 1024;
-    _useScreenCompression = prefs.getBool('mobile_use_use_screen_compression') ?? true;
+    _useScreenCompression =
+        prefs.getBool('mobile_use_use_screen_compression') ?? true;
     _useSystemPrompt = prefs.getBool('mobile_use_use_system_prompt') ?? true;
   }
 
@@ -206,7 +209,8 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
     _useSystemPrompt = useSystemPrompt;
     await prefs.setDouble('mobile_use_temperature', temperature);
     await prefs.setInt('mobile_use_max_tokens', maxTokens);
-    await prefs.setBool('mobile_use_use_screen_compression', useScreenCompression);
+    await prefs.setBool(
+        'mobile_use_use_screen_compression', useScreenCompression);
     await prefs.setBool('mobile_use_use_system_prompt', useSystemPrompt);
   }
 
@@ -263,30 +267,89 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
   static Map<String, String> presetFor(String alias) {
     switch (alias.toLowerCase()) {
       case 'eburon':
-        return {'alias': 'eburon', 'baseUrl': ollamaBaseUrl, 'apiKey': 'ollama', 'model': 'eburon', 'description': 'Ollama local (Termux)'};
+        return {
+          'alias': 'eburon',
+          'baseUrl': ollamaBaseUrl,
+          'apiKey': 'ollama',
+          'model': 'eburon',
+          'description': 'Ollama local (Termux)'
+        };
       case 'openbox':
-        return {'alias': 'openbox', 'baseUrl': opencodeBaseUrl, 'apiKey': 'dummy', 'model': 'openbox', 'description': 'OpenCode (Termux proot)'};
+        return {
+          'alias': 'openbox',
+          'baseUrl': opencodeBaseUrl,
+          'apiKey': 'dummy',
+          'model': 'openbox',
+          'description': 'OpenCode (Termux proot)'
+        };
       case 'eburon-os':
-        return {'alias': 'eburon-os', 'baseUrl': geminiBaseUrl, 'apiKey': geminiHardcodedKey, 'model': 'eburon-os', 'description': 'Gemini API (Eburon OS)'};
+        return {
+          'alias': 'eburon-os',
+          'baseUrl': geminiBaseUrl,
+          'apiKey': geminiHardcodedKey,
+          'model': 'eburon-os',
+          'description': 'Gemini API (Eburon OS)'
+        };
       case 'eburon-beta':
-        return {'alias': 'eburon-beta', 'baseUrl': groqBaseUrl, 'apiKey': groqHardcodedKey, 'model': 'eburon-beta', 'description': 'Groq LPU (Eburon Beta)'};
+        return {
+          'alias': 'eburon-beta',
+          'baseUrl': groqBaseUrl,
+          'apiKey': groqHardcodedKey,
+          'model': 'eburon-beta',
+          'description': 'Groq LPU (Eburon Beta)'
+        };
       case 'deepseek':
-        return {'alias': 'deepseek', 'baseUrl': deepseekBaseUrl, 'apiKey': '', 'model': 'deepseek', 'description': 'DeepSeek chat API'};
+        return {
+          'alias': 'deepseek',
+          'baseUrl': deepseekBaseUrl,
+          'apiKey': '',
+          'model': 'deepseek',
+          'description': 'DeepSeek chat API'
+        };
       case 'eburon-cloud':
-        return {'alias': 'eburon-cloud', 'baseUrl': ollamaCloudBaseUrl, 'apiKey': ollamaCloudHardcodedKey, 'model': 'eburon-cloud', 'description': 'Ollama Cloud (Eburon Cloud)'};
+        return {
+          'alias': 'eburon-cloud',
+          'baseUrl': ollamaCloudBaseUrl,
+          'apiKey': ollamaCloudHardcodedKey,
+          'model': 'eburon-cloud',
+          'description': 'Ollama Cloud (Eburon Cloud)'
+        };
       case 'nvidia':
-        return {'alias': 'nvidia', 'baseUrl': nvidiaBaseUrl, 'apiKey': '', 'model': 'nvidia', 'description': 'NVIDIA NIM free tier'};
+        return {
+          'alias': 'nvidia',
+          'baseUrl': nvidiaBaseUrl,
+          'apiKey': '',
+          'model': 'nvidia',
+          'description': 'NVIDIA NIM free tier'
+        };
       case 'openrouter':
-        return {'alias': 'openrouter', 'baseUrl': openrouterBaseUrl, 'apiKey': '', 'model': 'openrouter', 'description': 'Multi-model router'};
+        return {
+          'alias': 'openrouter',
+          'baseUrl': openrouterBaseUrl,
+          'apiKey': '',
+          'model': 'openrouter',
+          'description': 'Multi-model router'
+        };
       default:
-        return {'alias': 'Custom', 'baseUrl': '', 'apiKey': '', 'model': '', 'description': 'Custom endpoint'};
+        return {
+          'alias': 'Custom',
+          'baseUrl': '',
+          'apiKey': '',
+          'model': '',
+          'description': 'Custom endpoint'
+        };
     }
   }
 
   static List<Map<String, String>> get presets => [
-        presetFor('eburon'), presetFor('openbox'), presetFor('eburon-os'),
-        presetFor('eburon-beta'), presetFor('deepseek'), presetFor('eburon-cloud'),
-        presetFor('nvidia'), presetFor('openrouter'),
+        presetFor('eburon'),
+        presetFor('openbox'),
+        presetFor('eburon-os'),
+        presetFor('eburon-beta'),
+        presetFor('deepseek'),
+        presetFor('eburon-cloud'),
+        presetFor('nvidia'),
+        presetFor('openrouter'),
       ];
 
   Future<void> applyPreset(Map<String, String> preset) async {
@@ -340,10 +403,13 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
     );
 
     if (response.statusCode != 200) {
-      throw ApiException(response.statusCode ?? 0, _extractError(response.data?.toString() ?? ''));
+      throw ApiException(response.statusCode ?? 0,
+          _extractError(response.data?.toString() ?? ''));
     }
 
-    final data = response.data is Map ? Map<String, dynamic>.from(response.data as Map) : <String, dynamic>{};
+    final data = response.data is Map
+        ? Map<String, dynamic>.from(response.data as Map)
+        : <String, dynamic>{};
     final content = _extractContent(data);
     final cleaned = _stripThinkBlocks(content);
     _conversationHistory.add({'role': 'assistant', 'content': cleaned});
@@ -379,15 +445,20 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
         );
 
         if (response.statusCode != 200) {
-          throw ApiException(response.statusCode ?? 0, _extractError(response.data?.toString() ?? ''));
+          throw ApiException(response.statusCode ?? 0,
+              _extractError(response.data?.toString() ?? ''));
         }
 
-        final data = response.data is Map ? Map<String, dynamic>.from(response.data as Map) : <String, dynamic>{};
+        final data = response.data is Map
+            ? Map<String, dynamic>.from(response.data as Map)
+            : <String, dynamic>{};
         final content = _stripThinkBlocks(_extractContent(data));
         final tokens = _extractTotalTokens(data);
         return (content: content, totalTokens: tokens);
       } catch (e) {
-        if (e is ApiException && (e.isRateLimited || e.isServerError) && attempt < maxRetries) {
+        if (e is ApiException &&
+            (e.isRateLimited || e.isServerError) &&
+            attempt < maxRetries) {
           await Future.delayed(Duration(seconds: 3 * attempt));
           continue;
         }
@@ -428,7 +499,8 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
   }
 
   // ─── Fetch Available Models ──────────────────────────────────────
-  Future<List<String>> fetchAvailableModels(String baseUrl, String apiKey) async {
+  Future<List<String>> fetchAvailableModels(
+      String baseUrl, String apiKey) async {
     try {
       String cleanUrl = baseUrl.replaceAll('/chat/completions', '');
       final response = await _client.get<Map<String, dynamic>>(
@@ -436,21 +508,22 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
         headers: {'Authorization': 'Bearer $apiKey'},
       );
       if (response.statusCode != 200) {
-        appLogger.w('fetchAvailableModels returned ${response.statusCode} for $cleanUrl');
+        appLogger.w(
+            'fetchAvailableModels returned ${response.statusCode} for $cleanUrl');
         return [];
       }
       final data = response.data;
       if (data == null) return [];
       final dataList = data['data'];
       if (dataList is! List) return [];
-      final models = dataList
-          .map((m) => (m is Map ? m['id'] : m).toString())
-          .toList();
+      final models =
+          dataList.map((m) => (m is Map ? m['id'] : m).toString()).toList();
       if (isNvidiaBaseUrl(cleanUrl)) return filterNvidiaFreeModels(models);
       models.sort();
       return models;
     } catch (e, s) {
-      appLogger.w('fetchAvailableModels failed for $baseUrl', error: e, stackTrace: s);
+      appLogger.w('fetchAvailableModels failed for $baseUrl',
+          error: e, stackTrace: s);
       return [];
     }
   }
@@ -480,12 +553,15 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
           final content = message['content'];
           if (content is String) return content;
           if (content is List) {
-            return content.map((c) => (c is Map ? c['text'] : c).toString()).join();
+            return content
+                .map((c) => (c is Map ? c['text'] : c).toString())
+                .join();
           }
         }
       }
     } catch (e, s) {
-      appLogger.w('Failed to extract content from response', error: e, stackTrace: s);
+      appLogger.w('Failed to extract content from response',
+          error: e, stackTrace: s);
     }
     return '';
   }
@@ -515,6 +591,8 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
   }
 
   String _stripThinkBlocks(String text) {
-    return text.replaceAll(RegExp(r'<think>.*?</think>', dotAll: true), '').trim();
+    return text
+        .replaceAll(RegExp(r'<think>.*?</think>', dotAll: true), '')
+        .trim();
   }
 }

@@ -9,7 +9,8 @@ class ConnectionDiagnostic {
   final bool reachable;
   final int? statusCode;
   final String? serviceName;
-  final String? errorType; // 'port_conflict' | 'unreachable' | 'bad_response' | 'ok'
+  final String?
+      errorType; // 'port_conflict' | 'unreachable' | 'bad_response' | 'ok'
   final String detail;
 
   const ConnectionDiagnostic({
@@ -28,7 +29,7 @@ class ConnectionDiagnostic {
 /// centralized logging — instead of a new `dart:io HttpClient` per call with
 /// no timeout and silently-swallowed errors.
 class DeviceControlService {
-  DeviceControlService(this._api, {String baseUrl = 'http://localhost:4096'})
+  DeviceControlService(this._api, {String baseUrl = 'http://127.0.0.1:4096'})
       : _baseUrl = baseUrl;
 
   final ApiClient _api;
@@ -112,7 +113,8 @@ class DeviceControlService {
         return Map<String, dynamic>.from(response.data as Map);
       }
     } catch (e, s) {
-      appLogger.w('DeviceControl getDeviceInfo failed', error: e, stackTrace: s);
+      appLogger.w('DeviceControl getDeviceInfo failed',
+          error: e, stackTrace: s);
     }
     return {};
   }
@@ -123,8 +125,15 @@ class DeviceControlService {
   Future<Map<String, dynamic>> tap(int x, int y) =>
       executeAction('tap', {'x': x, 'y': y});
 
-  Future<Map<String, dynamic>> swipe(int x1, int y1, int x2, int y2, {int? duration}) =>
-      executeAction('swipe', {'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2, 'duration': duration ?? 300});
+  Future<Map<String, dynamic>> swipe(int x1, int y1, int x2, int y2,
+          {int? duration}) =>
+      executeAction('swipe', {
+        'x1': x1,
+        'y1': y1,
+        'x2': x2,
+        'y2': y2,
+        'duration': duration ?? 300
+      });
 
   Future<Map<String, dynamic>> typeText(String text) =>
       executeAction('type_text', {'text': text});
@@ -135,7 +144,8 @@ class DeviceControlService {
   Future<Map<String, dynamic>> takeScreenshot({bool saveToWorkspace = false}) =>
       executeAction('take_screenshot', {'saveToWorkspace': saveToWorkspace});
 
-  Future<Map<String, dynamic>> getUiLayout() => executeAction('get_ui_layout', {});
+  Future<Map<String, dynamic>> getUiLayout() =>
+      executeAction('get_ui_layout', {});
 
   Future<Map<String, dynamic>> getInstalledApps({bool userOnly = true}) =>
       executeAction('get_installed_apps', {'userOnly': userOnly});
@@ -153,7 +163,8 @@ class DeviceControlService {
   Future<Map<String, dynamic>> setVolume(String stream, int level) =>
       executeAction('set_volume', {'stream': stream, 'level': level});
 
-  Future<Map<String, dynamic>> getClipboard() => executeAction('get_clipboard', {});
+  Future<Map<String, dynamic>> getClipboard() =>
+      executeAction('get_clipboard', {});
 
   Future<Map<String, dynamic>> setClipboard(String text) =>
       executeAction('set_clipboard', {'text': text});
@@ -161,9 +172,8 @@ class DeviceControlService {
   Future<Map<String, dynamic>> notify(String title, String message) =>
       executeAction('notify', {'title': title, 'message': message});
 
-  Future<Map<String, dynamic>> getScreenSize() => executeAction('get_screen_size', {});
-
-
+  Future<Map<String, dynamic>> getScreenSize() =>
+      executeAction('get_screen_size', {});
 
   /// Probe the server port and detect what's running.
   ///
@@ -205,15 +215,20 @@ class DeviceControlService {
         statusCode: null,
         serviceName: null,
         errorType: 'unreachable',
-        detail: 'Cannot reach $_baseUrl. Make sure Opencode is running in your Proot distro. Run: proot-distro login ubuntu && opencode server',
+        detail:
+            'Cannot reach $_baseUrl. Make sure Opencode is running in your Proot distro. Run: proot-distro login ubuntu && opencode server',
       );
     }
   }
 
   /// Execute a raw action on the device control server.
-  Future<Map<String, dynamic>> executeAction(String action, Map<String, dynamic> request) async {
+  Future<Map<String, dynamic>> executeAction(
+      String action, Map<String, dynamic> request) async {
     if (!_connected) {
-      return {'success': false, 'error': 'Device control bridge is not connected'};
+      return {
+        'success': false,
+        'error': 'Device control bridge is not connected'
+      };
     }
     try {
       final response = await _api.post<Map<String, dynamic>>(
@@ -231,7 +246,8 @@ class DeviceControlService {
       appLogger.w('DeviceControl executeAction failed: ${e.message}', error: e);
       return {'success': false, 'error': e.message};
     } catch (e, s) {
-      appLogger.w('DeviceControl executeAction failed', error: e, stackTrace: s);
+      appLogger.w('DeviceControl executeAction failed',
+          error: e, stackTrace: s);
       return {'success': false, 'error': e.toString()};
     }
   }

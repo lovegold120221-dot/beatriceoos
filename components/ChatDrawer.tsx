@@ -75,8 +75,8 @@ export default function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
   };
 
   return (
-    <div className="drawer-overlay" onClick={onClose}>
-      <div className="drawer-content chat-drawer" onClick={e => e.stopPropagation()}>
+    <div className="drawer-overlay full-screen" onClick={onClose}>
+      <div className="drawer-content chat-drawer full-screen" onClick={e => e.stopPropagation()}>
         <div className="drawer-header">
           <div className="drawer-title">
             <h3>Conversation</h3>

@@ -10,7 +10,7 @@ Beatrice voice assistant — Eburon AI Gemini Live API.
 | **eburon-beta** | `eburon-beta`    | `https://api.groq.com/openai/v1`                                  | 🔑 Hardcoded   | Groq LPU                   |
 | **eburon-cloud**| `eburon-cloud`   | `https://api.ollama.ai/v1`                                        | 🔑 Hardcoded   | Ollama Cloud               |
 | **eburon**      | `eburon`         | `http://localhost:11434/v1`                                       | `ollama`       | Ollama local (Termux)      |
-| **openbox**     | `openbox`        | `http://localhost:4096/v1`                                        | `dummy`        | OpenCode (Termux proot)    |
+| **openbox**     | `openbox`        | `http://127.0.0.1:4096/v1`                                        | `dummy`        | OpenCode (Termux proot)    |
 | deepseek        | `deepseek`       | `https://api.deepseek.com`                                        | User-provided  | DeepSeek chat API          |
 | nvidia          | `nvidia`         | `https://integrate.api.nvidia.com/v1`                             | User-provided  | NVIDIA NIM free tier       |
 | openrouter      | `openrouter`     | `https://openrouter.ai/api/v1`                                    | User-provided  | Multi-model router         |
