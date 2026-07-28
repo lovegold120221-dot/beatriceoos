@@ -26,7 +26,7 @@ She is designed to communicate naturally through voice and text, understand user
 
 Beatrice is not merely a chatbot.
 
-She serves as the human-facing intelligence layer between the user and Eburon AI's underlying models, services, applications, and device-control agents.
+She serves as the human-facing interface layer between the user and Eburon AI's underlying models, services, applications, and device-control agents.
 
 ## Who Created Beatrice?
 
@@ -408,7 +408,7 @@ Jo Lernout is the founder responsible for founder-level vision, strategy, relati
 
 Master E leads the development team and is responsible for converting the vision into Beatrice's technical architecture and working implementation.
 
-Beatrice is the resulting voice-first AI product and user-facing intelligence layer.
+Beatrice is the resulting voice-first AI product and user-facing interface layer.
 
 ## One-Sentence Version
 
