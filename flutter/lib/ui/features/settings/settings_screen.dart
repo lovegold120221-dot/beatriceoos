@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/settings_viewmodel.dart';
 import '../../../data/models/template_model.dart';
+import '../../../data/services/mobile_use_ai_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -13,11 +14,29 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoadingFromFirebase = false;
   bool _showDeviceSettings = false;
+  bool _showAiSettings = false;
   late TextEditingController _urlController;
   late TextEditingController _opencodeUrlController;
   late TextEditingController _workspaceController;
   late TextEditingController _adbAddressController;
   late TextEditingController _adbPortController;
+
+  // MobileUse AI fields
+  String _aiProviderAlias = 'eburon-os';
+  late TextEditingController _aiApiKeyController;
+  late TextEditingController _aiBaseUrlController;
+  late TextEditingController _aiModelController;
+
+  static const _aiProviderChips = [
+    ('eburon-os', Icons.auto_awesome, Colors.blueAccent),
+    ('eburon-beta', Icons.flash_on, Colors.greenAccent),
+    ('eburon-cloud', Icons.cloud, Colors.cyanAccent),
+    ('eburon', Icons.computer, Colors.orangeAccent),
+    ('openbox', Icons.code, Colors.purpleAccent),
+    ('deepseek', Icons.psychology, Colors.redAccent),
+    ('nvidia', Icons.memory, Colors.tealAccent),
+    ('openrouter', Icons.alt_route, Colors.yellowAccent),
+  ];
 
   @override
   void initState() {
@@ -29,7 +48,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
         TextEditingController(text: '/storage/shared/MobileUse-Agent');
     _adbAddressController = TextEditingController();
     _adbPortController = TextEditingController(text: '5555');
+
+    _aiApiKeyController = TextEditingController();
+    _aiBaseUrlController = TextEditingController();
+    _aiModelController = TextEditingController();
+
     _loadSettings();
+    _initAiFromPreset('eburon-os');
+  }
+
+  void _initAiFromPreset(String alias) {
+    final preset = MobileUseAiService.presetFor(alias);
+    setState(() {
+      _aiProviderAlias = preset['alias']!;
+      _aiApiKeyController.text = preset['apiKey']!;
+      _aiBaseUrlController.text = preset['baseUrl']!;
+      _aiModelController.text = preset['model']!;
+    });
   }
 
   Future<void> _loadSettings() async {
@@ -121,6 +156,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ]),
                   const SizedBox(height: 24),
 
+                  // ─── MobileUse AI Engine ───
+                  InkWell(
+                    onTap: () =>
+                        setState(() => _showAiSettings = !_showAiSettings),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.psychology,
+                            color: Color(0xFF00D4AA)),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'MobileUse AI Engine',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          _showAiSettings
+                              ? Icons.expand_less
+                              : Icons.expand_more,
+                          color: Colors.grey,
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_showAiSettings) ...[
+                    const SizedBox(height: 16),
+                    _buildMobileUseAiSettings(),
+                  ],
+                  const SizedBox(height: 24),
+
                   // ─── Device Control Settings ───
                   InkWell(
                     onTap: () => setState(
@@ -171,6 +239,118 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildMobileUseAiSettings() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF16213E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: const Color(0xFF00D4AA).withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Provider Presets',
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.white70),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _aiProviderChips.map((c) {
+              final (alias, icon, color) = c;
+              return _providerChip(alias, icon, color);
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          _textField('Base URL', _aiBaseUrlController.text, (v) {
+            _aiBaseUrlController.text = v;
+          }),
+          const SizedBox(height: 12),
+          _textField('API Key', _aiApiKeyController.text, (v) {
+            _aiApiKeyController.text = v;
+          }),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            key: ValueKey('provider_alias_$_aiProviderAlias'),
+            initialValue: _aiProviderAlias,
+            decoration: InputDecoration(
+              labelText: 'Provider Alias',
+              labelStyle: const TextStyle(fontSize: 12, color: Colors.grey),
+              filled: true,
+              fillColor: const Color(0xFF0F172A),
+            ),
+            dropdownColor: const Color(0xFF16213E),
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+            items: _aiProviderChips.map((c) {
+              final (alias, _, _) = c;
+              return DropdownMenuItem<String>(
+                value: alias,
+                child: Text(alias),
+              );
+            }).toList(),
+            onChanged: (val) {
+              if (val != null) {
+                setState(() => _aiProviderAlias = val);
+                _initAiFromPreset(val);
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle,
+                    color: Color(0xFF00D4AA), size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  'Active: $_aiProviderAlias',
+                  style: const TextStyle(
+                      fontSize: 12, color: Color(0xFF00D4AA)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _providerChip(
+      String alias, IconData icon, Color color) {
+    final isActive = _aiProviderAlias == alias;
+    return ActionChip(
+      avatar: Icon(icon,
+          size: 16, color: isActive ? Colors.white : color),
+      label: Text(
+        alias,
+        style: TextStyle(
+          fontSize: 11,
+          color: isActive ? Colors.white : Colors.white70,
+        ),
+      ),
+      backgroundColor: isActive
+          ? color.withValues(alpha: 0.3)
+          : Colors.white.withValues(alpha: 0.08),
+      side: BorderSide(color: isActive ? color : Colors.white12),
+      onPressed: () {
+        setState(() => _aiProviderAlias = alias);
+        _initAiFromPreset(alias);
+      },
     );
   }
 

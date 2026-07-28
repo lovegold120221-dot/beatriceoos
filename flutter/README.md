@@ -2,25 +2,21 @@
 
 Beatrice voice assistant — Eburon AI Gemini Live API.
 
-## MobileUse Agent: AI Provider Aliases
+## MobileUse Agent: Provider Aliases
 
-| Alias        | Alias Name        | Base URL                                                                 | API Key              | Model Alias (used in UI) | Resolves To                   | Notes                                |
-|--------------|-------------------|--------------------------------------------------------------------------|----------------------|--------------------------|-------------------------------|--------------------------------------|
-| Gemini       | gemini            | `https://generativelanguage.googleapis.com/v1beta/openai/`               | 🔑 Hardcoded         | `gemini`                 | `gemini-2.0-flash`           | Google Gemini API                    |
-| Groq         | groq              | `https://api.groq.com/openai/v1`                                         | 🔑 Hardcoded         | `groq`                   | `llama-3.3-70b-versatile`    | Groq LPU inference                   |
-| OllamaCloud  | ollamacloud       | `https://api.ollama.ai/v1`                                               | 🔑 Hardcoded         | `ollamacloud`            | `gemma3:4b`                  | Ollama cloud API                     |
-| Ollama       | ollama            | `http://localhost:11434/v1`                                              | `ollama`             | `ollama`                 | `gemma3:4b`                  | Local model via Termux               |
-| OpenCode     | opencode          | `http://localhost:4096/v1`                                               | `dummy`              | `opencode`               | `deepseek-chat`              | Self-hosted Termux proot-distro      |
-| DeepSeek     | deepseek          | `https://api.deepseek.com`                                               | User-provided        | `deepseek`               | `deepseek-chat`              | DeepSeek chat API                    |
-| NVIDIA       | nvidia            | `https://integrate.api.nvidia.com/v1`                                    | User-provided        | `nvidia`                 | `z-ai/glm-5.2`               | NVIDIA NIM free tier (14+ models)    |
-| OpenRouter   | openrouter        | `https://openrouter.ai/api/v1`                                           | User-provided        | `openrouter`             | `openai/gpt-oss-120b:free`   | Multi-model router                   |
+| Alias           | Used In Settings | Base URL                                                          | API Key        | Notes                      |
+|-----------------|------------------|-------------------------------------------------------------------|----------------|----------------------------|
+| **eburon-os**   | `eburon-os`      | `https://generativelanguage.googleapis.com/v1beta/openai/`        | 🔑 Hardcoded   | Gemini API                 |
+| **eburon-beta** | `eburon-beta`    | `https://api.groq.com/openai/v1`                                  | 🔑 Hardcoded   | Groq LPU                   |
+| **eburon-cloud**| `eburon-cloud`   | `https://api.ollama.ai/v1`                                        | 🔑 Hardcoded   | Ollama Cloud               |
+| **eburon**      | `eburon`         | `http://localhost:11434/v1`                                       | `ollama`       | Ollama local (Termux)      |
+| **openbox**     | `openbox`        | `http://localhost:4096/v1`                                        | `dummy`        | OpenCode (Termux proot)    |
+| deepseek        | `deepseek`       | `https://api.deepseek.com`                                        | User-provided  | DeepSeek chat API          |
+| nvidia          | `nvidia`         | `https://integrate.api.nvidia.com/v1`                             | User-provided  | NVIDIA NIM free tier       |
+| openrouter      | `openrouter`     | `https://openrouter.ai/api/v1`                                    | User-provided  | Multi-model router         |
 
-> 🔑 **Hardcoded keys** are pre-filled automatically when you tap the provider chip in Settings.
-> Start typing the alias name in the settings to auto-select the preset.
->
-> 💡 The **Model** field uses short alias names (`gemini`, `groq`, etc.) which are
-> automatically resolved to full API model names (`gemini-2.0-flash`, `llama-3.3-70b-versatile`, etc.)
-> when making requests. You can still type a custom full model name directly — it passes through as-is.
+> 🔑 **Hardcoded keys** pre-filled automatically when you tap the chip in Settings.
+> 💡 Pick an alias from the dropdown — the real model name is resolved internally.
 
 ## Service Classes
 

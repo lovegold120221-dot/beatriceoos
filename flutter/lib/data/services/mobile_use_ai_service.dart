@@ -9,27 +9,27 @@ import '../models/agent_action.dart';
 /// Handles all major providers through a single send/parse pattern.
 ///
 /// Provider Aliases:
-///   Ollama    — localhost:11434/v1  (Termux, no key required)
-///   OpenCode  — localhost:4096/v1  (Termux proot-distro)
-///   Gemini    — generativelanguage.googleapis.com/v1beta/openai/
-///   Groq      — api.groq.com/openai/v1
-///   DeepSeek  — api.deepseek.com
-///   NVIDIA    — integrate.api.nvidia.com/v1
-///   OllamaCloud — api.ollama.ai/v1
-///   OpenRouter  — openrouter.ai/api/v1
+///   eburon    — localhost:11434/v1  (Ollama local, Termux)
+///   openbox   — localhost:4096/v1   (OpenCode, Termux proot)
+///   eburon-os — generativelanguage.googleapis.com/v1beta/openai/  (Gemini)
+///   eburon-beta — api.groq.com/openai/v1  (Groq)
+///   eburon-cloud — api.ollama.ai/v1  (Ollama Cloud)
+///   deepseek  — api.deepseek.com
+///   nvidia    — integrate.api.nvidia.com/v1
+///   openrouter — openrouter.ai/api/v1
 class MobileUseAiService {
   MobileUseAiService._();
 
   static final MobileUseAiService instance = MobileUseAiService._();
 
   // ─── Hardcoded API Keys ──────────────────────────────────────────
-  // Alias: Gemini (gemini)
+  // Alias: eburon-os (Gemini)
   static const String geminiHardcodedKey =
       '';
-  // Alias: Groq (groq)
+  // Alias: eburon-beta (Groq)
   static const String groqHardcodedKey =
       '';
-  // Alias: OllamaCloud (ollamacloud)
+  // Alias: eburon-cloud (OllamaCloud)
   static const String ollamaCloudHardcodedKey =
       '';
 
@@ -40,32 +40,32 @@ class MobileUseAiService {
   static const String nvidiaBaseUrl = 'https://integrate.api.nvidia.com/v1';
   static const String nvidiaDefaultModel = 'z-ai/glm-5.2';
 
-  // Alias: Ollama (ollama)
+  // Alias: eburon (Ollama)
   static const String ollamaBaseUrl = 'http://localhost:11434/v1';
   static const String ollamaDefaultModel = 'gemma3:4b';
 
-  // Alias: OpenCode (opencode)
+  // Alias: openbox (OpenCode)
   static const String opencodeBaseUrl = 'http://localhost:4096/v1';
   static const String opencodeDefaultModel = 'deepseek-chat';
 
-  // Alias: Gemini (gemini)
+  // Alias: eburon-os (Gemini)
   static const String geminiBaseUrl =
       'https://generativelanguage.googleapis.com/v1beta/openai/';
-  static const String geminiDefaultModel = 'gemini-2.0-flash';
+  static const String geminiDefaultModel = 'gemini-3.1-flash-lite';
 
-  // Alias: Groq (groq)
+  // Alias: eburon-beta (Groq)
   static const String groqBaseUrl = 'https://api.groq.com/openai/v1';
-  static const String groqDefaultModel = 'llama-3.3-70b-versatile';
+  static const String groqDefaultModel = 'openai/gpt-oss-120b';
 
-  // Alias: DeepSeek (deepseek)
+  // Alias: deepseek
   static const String deepseekBaseUrl = 'https://api.deepseek.com';
   static const String deepseekDefaultModel = 'deepseek-chat';
 
-  // Alias: OllamaCloud (ollamacloud)
+  // Alias: eburon-cloud (OllamaCloud)
   static const String ollamaCloudBaseUrl = 'https://api.ollama.ai/v1';
-  static const String ollamaCloudDefaultModel = 'gemma3:4b';
+  static const String ollamaCloudDefaultModel = 'glm-5.2:cloud';
 
-  // Alias: OpenRouter (openrouter)
+  // Alias: openrouter
   static const String openrouterBaseUrl = 'https://openrouter.ai/api/v1';
   static const String openrouterDefaultModel = 'openai/gpt-oss-120b:free';
 
@@ -220,11 +220,11 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
   // ─── Alias → Model Name Resolution ──────────────────────────────
   /// Maps short alias names to the actual API model identifiers.
   static const Map<String, String> aliasToModel = {
-    'gemini': geminiDefaultModel,
-    'groq': groqDefaultModel,
-    'ollamacloud': ollamaCloudDefaultModel,
-    'ollama': ollamaDefaultModel,
-    'opencode': opencodeDefaultModel,
+    'eburon-os': geminiDefaultModel,
+    'eburon-beta': groqDefaultModel,
+    'eburon-cloud': ollamaCloudDefaultModel,
+    'eburon': ollamaDefaultModel,
+    'openbox': opencodeDefaultModel,
     'deepseek': deepseekDefaultModel,
     'nvidia': nvidiaDefaultModel,
     'openrouter': openrouterDefaultModel,
@@ -250,57 +250,57 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
   /// the actual model identifier at request time.
   static Map<String, String> presetFor(String alias) {
     switch (alias.toLowerCase()) {
-      case 'ollama':
+      case 'eburon':
         return {
-          'alias': 'Ollama',
+          'alias': 'eburon',
           'baseUrl': ollamaBaseUrl,
           'apiKey': 'ollama',
-          'model': 'ollama',
-          'description': 'Local model in Termux',
+          'model': 'eburon',
+          'description': 'Ollama local (Termux)',
         };
-      case 'opencode':
+      case 'openbox':
         return {
-          'alias': 'OpenCode',
+          'alias': 'openbox',
           'baseUrl': opencodeBaseUrl,
           'apiKey': 'dummy',
-          'model': 'opencode',
-          'description': 'Self-hosted in Termux proot',
+          'model': 'openbox',
+          'description': 'OpenCode (Termux proot)',
         };
-      case 'gemini':
+      case 'eburon-os':
         return {
-          'alias': 'Gemini',
+          'alias': 'eburon-os',
           'baseUrl': geminiBaseUrl,
           'apiKey': geminiHardcodedKey,
-          'model': 'gemini',
-          'description': 'Google Gemini API',
+          'model': 'eburon-os',
+          'description': 'Gemini API (Eburon OS)',
         };
-      case 'groq':
+      case 'eburon-beta':
         return {
-          'alias': 'Groq',
+          'alias': 'eburon-beta',
           'baseUrl': groqBaseUrl,
           'apiKey': groqHardcodedKey,
-          'model': 'groq',
-          'description': 'Groq LPU inference',
+          'model': 'eburon-beta',
+          'description': 'Groq LPU (Eburon Beta)',
         };
       case 'deepseek':
         return {
-          'alias': 'DeepSeek',
+          'alias': 'deepseek',
           'baseUrl': deepseekBaseUrl,
           'apiKey': '',
           'model': 'deepseek',
           'description': 'DeepSeek chat API',
         };
-      case 'ollamacloud':
+      case 'eburon-cloud':
         return {
-          'alias': 'OllamaCloud',
+          'alias': 'eburon-cloud',
           'baseUrl': ollamaCloudBaseUrl,
           'apiKey': ollamaCloudHardcodedKey,
-          'model': 'ollamacloud',
-          'description': 'Ollama cloud API',
+          'model': 'eburon-cloud',
+          'description': 'Ollama Cloud (Eburon Cloud)',
         };
       case 'nvidia':
         return {
-          'alias': 'NVIDIA',
+          'alias': 'nvidia',
           'baseUrl': nvidiaBaseUrl,
           'apiKey': '',
           'model': 'nvidia',
@@ -308,7 +308,7 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
         };
       case 'openrouter':
         return {
-          'alias': 'OpenRouter',
+          'alias': 'openrouter',
           'baseUrl': openrouterBaseUrl,
           'apiKey': '',
           'model': 'openrouter',
@@ -327,12 +327,12 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
 
   /// List all built-in provider presets.
   static List<Map<String, String>> get presets => [
-        presetFor('ollama'),
-        presetFor('opencode'),
-        presetFor('gemini'),
-        presetFor('groq'),
+        presetFor('eburon'),
+        presetFor('openbox'),
+        presetFor('eburon-os'),
+        presetFor('eburon-beta'),
         presetFor('deepseek'),
-        presetFor('ollamacloud'),
+        presetFor('eburon-cloud'),
         presetFor('nvidia'),
         presetFor('openrouter'),
       ];
