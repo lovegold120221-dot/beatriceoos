@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useDeviceControl } from '@/lib/state';
 
 export default function StatusBar() {
   const [timeStr, setTimeStr] = useState('');
+  const { mobileUseConnected } = useDeviceControl();
 
   useEffect(() => {
     const updateTime = () => {
@@ -24,6 +26,11 @@ export default function StatusBar() {
     <div className="status-bar">
       <div className="time">{timeStr || '4:39 AM'}</div>
       <div className="status-icons">
+        {/* MobileUse Connection Indicator */}
+        <span
+          className={`mu-indicator ${mobileUseConnected ? 'connected' : 'disconnected'}`}
+          title={mobileUseConnected ? 'MobileUse Connected' : 'MobileUse Disconnected'}
+        />
         {/* Signal Icon */}
         <svg viewBox="0 0 24 24" aria-label="Signal">
           <path

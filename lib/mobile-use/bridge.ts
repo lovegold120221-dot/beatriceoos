@@ -4,6 +4,14 @@
  */
 import { DeviceAction, DeviceRequest } from './types';
 
+export interface PortDiagnostic {
+  reachable: boolean;
+  statusCode: number | null;
+  serviceName: string | null;
+  errorType: 'port_conflict' | 'unreachable' | 'bad_response' | 'ok' | null;
+  detail: string;
+}
+
 interface MobileUseStatus {
   connected: boolean;
   deviceId: string | null;
@@ -75,6 +83,61 @@ class MobileUseBridge {
       };
       console.warn('MobileUse bridge connection failed:', err);
       return false;
+    }
+  }
+
+  /**
+   * Diagnose port status — detects whether MobileUse is running,
+   * something else is on the port, or nothing at all.
+   */
+  async diagnoseConnection(): Promise<PortDiagnostic> {
+    try {
+      const response = await fetch(`${this.baseUrl}/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(4000),
+      });
+
+      if (response.ok) {
+        return {
+          reachable: true,
+          statusCode: 200,
+          serviceName: 'MobileUse-Agent',
+          errorType: 'ok',
+          detail: 'MobileUse-Agent is running and healthy.',
+        };
+      }
+
+      // Server responded but with an error — could be another service
+      const serverHeader = response.headers.get('server') || '';
+      const contentType = response.headers.get('content-type') || '';
+      let serviceName: string | null = null;
+
+      if (serverHeader.toLowerCase().includes('airtunes') || serverHeader.toLowerCase().includes('airplay')) {
+        serviceName = 'AirTunes (Apple AirPlay)';
+      } else if (serverHeader) {
+        serviceName = serverHeader;
+      } else if (contentType.includes('text/html')) {
+        serviceName = 'Unknown web server';
+      }
+
+      return {
+        reachable: true,
+        statusCode: response.status,
+        serviceName,
+        errorType: serviceName ? 'port_conflict' : 'bad_response',
+        detail: serviceName
+          ? `Port ${this.baseUrl.replace(/^.*:/, '')} is in use by ${serviceName} (HTTP ${response.status}).`
+          : `Port ${this.baseUrl.replace(/^.*:/, '')} responded with HTTP ${response.status}, but not with MobileUse-Agent.`,
+      };
+    } catch (err) {
+      // No response at all — port is open (nothing listening), or connection refused
+      return {
+        reachable: false,
+        statusCode: null,
+        serviceName: null,
+        errorType: 'unreachable',
+        detail: `Cannot reach ${this.baseUrl}. Make sure MobileUse-Agent is running on your device and the port is forwarded (adb reverse tcp:5000 tcp:5000).`,
+      };
     }
   }
 

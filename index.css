@@ -85,6 +85,26 @@ html, body {
     fill: #ffffff;
 }
 
+/* MobileUse status dot in StatusBar */
+.mu-indicator {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    transition: all 0.3s ease;
+    margin-right: 2px;
+}
+
+.mu-indicator.connected {
+    background: #a4e776;
+    box-shadow: 0 0 6px rgba(164, 231, 118, 0.6);
+}
+
+.mu-indicator.disconnected {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: none;
+}
+
 /* --- Header Section --- */
 .header {
     display: flex;
@@ -1005,6 +1025,36 @@ html, body {
 
 .ps-status-dot.disconnected {
     background: rgba(255, 255, 255, 0.2);
+}
+
+/* Connection diagnostic detail row */
+.ps-diagnostic {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.5;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    word-break: break-word;
+}
+
+.ps-diagnostic.port-conflict {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+}
+
+.ps-diagnostic.unreachable {
+    background: rgba(59, 130, 246, 0.06);
+    border-color: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+}
+
+.ps-diagnostic.connected-ok {
+    background: rgba(164, 231, 118, 0.06);
+    border-color: rgba(164, 231, 118, 0.15);
+    color: #a4e776;
 }
 
 @keyframes pulse-dot {

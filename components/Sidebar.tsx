@@ -9,7 +9,7 @@ import { useLiveAPIContext } from '@/contexts/LiveAPIContext';
 import { useState, useEffect, useCallback } from 'react';
 import ToolEditorModal from './ToolEditorModal';
 import { saveSettingsToFirebase, loadSettingsFromFirebase } from '@/lib/firebase';
-import { getMobileUseBridge } from '@/lib/mobile-use/bridge';
+import { getMobileUseBridge, PortDiagnostic } from '@/lib/mobile-use/bridge';
 
 const AVAILABLE_MODELS = [
   DEFAULT_LIVE_API_MODEL
@@ -124,15 +124,24 @@ export default function Sidebar() {
   };
 
   const [psConnecting, setPsConnecting] = useState(false);
+  const [portDiagnostic, setPortDiagnostic] = useState<PortDiagnostic | null>(null);
 
   const handleTestConnection = useCallback(async () => {
     setPsConnecting(true);
+    setPortDiagnostic(null);
     try {
       const bridge = getMobileUseBridge();
       bridge.setBaseUrl(mobileUseUrl);
       bridge.setWorkspacePath(workspacePath);
-      const result = await bridge.connect();
-      setMobileUseConnected(result);
+
+      // Run diagnostic in parallel with the connection attempt
+      const [connectResult, diag] = await Promise.all([
+        bridge.connect(),
+        bridge.diagnoseConnection(),
+      ]);
+
+      setMobileUseConnected(connectResult);
+      setPortDiagnostic(diag);
     } catch {
       setMobileUseConnected(false);
     } finally {
@@ -463,6 +472,39 @@ export default function Sidebar() {
                   {psConnecting ? 'Connecting...' : mobileUseConnected ? 'Reconnect' : 'Connect'}
                 </button>
               </div>
+
+              {/* Port diagnostic detail */}
+              {portDiagnostic && !mobileUseConnected && (
+                <div className={`ps-diagnostic ${portDiagnostic.errorType}`}>
+                  {portDiagnostic.errorType === 'port_conflict' && (
+                    <>
+                      ⚠️ <strong>Port Conflict</strong><br />
+                      {portDiagnostic.detail}
+                      <div style={{ marginTop: '6px', fontSize: '10px', opacity: 0.7 }}>
+                        Stop the conflicting service or change the MobileUse Server URL to a different port.
+                      </div>
+                    </>
+                  )}
+                  {portDiagnostic.errorType === 'unreachable' && (
+                    <>
+                      🔌 <strong>No Server Detected</strong><br />
+                      {portDiagnostic.detail}
+                    </>
+                  )}
+                  {portDiagnostic.errorType === 'bad_response' && (
+                    <>
+                      ⚠️ {portDiagnostic.detail}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Success diagnostic */}
+              {portDiagnostic && mobileUseConnected && (
+                <div className="ps-diagnostic connected-ok">
+                  ✅ {portDiagnostic.detail}
+                </div>
+              )}
             </div>
 
             {/* Permissions Note */}
