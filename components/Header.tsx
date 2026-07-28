@@ -2,7 +2,7 @@ import { useUI } from '@/lib/state';
 import { useAuth } from '@/components/auth/AuthProvider';
 
 export default function Header() {
-  const { toggleSidebar } = useUI();
+  const { toggleSidebar, toggleProfile } = useUI();
   const { currentUser } = useAuth();
 
   const getInitials = (name: string | null): string => {
@@ -34,8 +34,8 @@ export default function Header() {
 
       <div
         className="avatar"
-        onClick={toggleSidebar}
-        title="Account / Settings"
+        onClick={toggleProfile}
+        title="My Profile"
       >
         {getInitials(currentUser?.displayName || currentUser?.email || null)}
       </div>

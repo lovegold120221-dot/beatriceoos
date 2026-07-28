@@ -18,6 +18,7 @@ import BottomNav from './components/BottomNav';
 import ChatDrawer from './components/ChatDrawer';
 import VideoDrawer from './components/VideoDrawer';
 import Sidebar from './components/Sidebar';
+import ProfilePanel from './components/ProfilePanel';
 import ErrorScreen from './components/demo/ErrorScreen';
 import SplashScreen from './components/auth/SplashScreen';
 import AuthPage from './components/auth/AuthPage';
@@ -255,6 +256,7 @@ Vary your tone, greeting, and phrasing dynamically every session so it feels fre
            <ChatDrawer isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
            <VideoDrawer isOpen={isVideoOpen} onClose={() => setIsVideoOpen(false)} />
            <Sidebar />
+           <ProfilePanel />
          </div>
        </div>
      );

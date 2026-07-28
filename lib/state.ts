@@ -72,9 +72,13 @@ export const useSettings = create<{
 export const useUI = create<{
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
+  showProfile: boolean;
+  toggleProfile: () => void;
 }>(set => ({
   isSidebarOpen: false,
   toggleSidebar: () => set(state => ({ isSidebarOpen: !state.isSidebarOpen })),
+  showProfile: false,
+  toggleProfile: () => set(state => ({ showProfile: !state.showProfile })),
 }));
 
 /**
