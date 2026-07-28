@@ -16,12 +16,12 @@ class ChatViewModel extends ChangeNotifier {
     this._geminiService,
   );
 
-  List<ConversationTurn> _turns = [];
+  final List<ConversationTurn> _turns = [];
   bool _isConnected = false;
-  bool _isListening = false;
-  double _volume = 0.0;
-  bool _isSpeechDetected = false;
-  int _vadProbability = 0;
+  final bool _isListening = false;
+  final double _volume = 0.0;
+  final bool _isSpeechDetected = false;
+  final int _vadProbability = 0;
 
   List<ConversationTurn> get turns => _turns;
   bool get isConnected => _isConnected;
@@ -58,16 +58,20 @@ class ChatViewModel extends ChangeNotifier {
     final agentName = _settingsViewModel.agentName;
 
     if (language.isNotEmpty) {
-      prompt += '\n\n## LANGUAGE PREFERENCE\nAlways converse, understand, and respond in $language.';
+      prompt +=
+          '\n\n## LANGUAGE PREFERENCE\nAlways converse, understand, and respond in $language.';
     }
 
     if (nuance.isNotEmpty) {
-      prompt += '\n\n## ACTIVE REGISTER / NUANCE MODE: $nuance\nAdopt a ${nuance.toLowerCase()} conversational register in your vocal delivery.';
+      prompt +=
+          '\n\n## ACTIVE REGISTER / NUANCE MODE: $nuance\nAdopt a ${nuance.toLowerCase()} conversational register in your vocal delivery.';
     }
 
-    prompt += '\n\n## NAMING & ADDRESSING DIRECTIVE\nYour name is "$agentName". The user\'s preferred name/title is "$userName". Naturally address the user as "$userName" during conversation.';
+    prompt +=
+        '\n\n## NAMING & ADDRESSING DIRECTIVE\nYour name is "$agentName". The user\'s preferred name/title is "$userName". Naturally address the user as "$userName" during conversation.';
 
-    prompt += '\n\n## PROACTIVE CONVERSATION INITIATION DIRECTIVE\nWhen a conversation session starts, you MUST IMMEDIATELY greet the user out loud first without waiting for them to speak. Address the user as "$userName". Dynamically pick up on a topic from past conversation memory.';
+    prompt +=
+        '\n\n## PROACTIVE CONVERSATION INITIATION DIRECTIVE\nWhen a conversation session starts, you MUST IMMEDIATELY greet the user out loud first without waiting for them to speak. Address the user as "$userName". Dynamically pick up on a topic from past conversation memory.';
 
     return prompt;
   }

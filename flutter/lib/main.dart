@@ -11,6 +11,8 @@ import 'data/services/audio_service.dart';
 import 'data/services/firebase_service.dart';
 import 'data/services/gemini_service.dart';
 import 'data/services/device_control_service.dart';
+import 'data/services/mobile_use_ai_service.dart';
+import 'data/services/mobile_use_action_handler.dart';
 import 'domain/use_cases/auth_use_case.dart';
 import 'domain/use_cases/settings_use_case.dart';
 import 'ui/viewmodels/auth_viewmodel.dart';
@@ -20,6 +22,7 @@ import 'ui/viewmodels/chat_viewmodel.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await MobileUseAiService.instance.init();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -57,6 +60,13 @@ class BeatriceApp extends StatelessWidget {
         ),
         Provider<DeviceControlService>(
           create: (_) => DeviceControlService(),
+        ),
+        Provider<MobileUseAiService>(
+          create: (_) => MobileUseAiService.instance,
+        ),
+        ProxyProvider<DeviceControlService, MobileUseActionHandler>(
+          update: (context, deviceControl, _) =>
+              MobileUseActionHandler(deviceControl),
         ),
         Provider<GeminiService>(
           create: (_) => GeminiService(),

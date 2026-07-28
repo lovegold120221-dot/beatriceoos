@@ -27,9 +27,10 @@ class _AuthPageState extends State<AuthPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.mic, size: 64, color: Colors.white.withOpacity(0.8)),
+                Icon(Icons.mic,
+                    size: 64, color: Colors.white.withValues(alpha: 0.8)),
                 const SizedBox(height: 16),
-                Text(
+                const Text(
                   'Beatrice',
                   style: TextStyle(
                     fontSize: 28,
@@ -39,7 +40,7 @@ class _AuthPageState extends State<AuthPage> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                const Text(
                   'Sign in to continue',
                   style: TextStyle(
                     fontSize: 13,
@@ -52,7 +53,7 @@ class _AuthPageState extends State<AuthPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
+                      color: Colors.red.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -66,9 +67,9 @@ class _AuthPageState extends State<AuthPage> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Email',
-                    labelStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                    labelStyle: TextStyle(color: Colors.grey, fontSize: 12),
                     hintText: 'you@example.com',
                   ),
                 ),
@@ -77,9 +78,9 @@ class _AuthPageState extends State<AuthPage> {
                   controller: _passwordController,
                   obscureText: true,
                   style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Password',
-                    labelStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                    labelStyle: TextStyle(color: Colors.grey, fontSize: 12),
                     hintText: '••••••••',
                   ),
                 ),
@@ -109,7 +110,9 @@ class _AuthPageState extends State<AuthPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      _isSignUp ? 'Already have an account? ' : "Don't have an account? ",
+                      _isSignUp
+                          ? 'Already have an account? '
+                          : "Don't have an account? ",
                       style: const TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                     TextButton(
@@ -121,7 +124,8 @@ class _AuthPageState extends State<AuthPage> {
                       },
                       child: Text(
                         _isSignUp ? 'Sign In' : 'Sign Up',
-                        style: const TextStyle(color: Color(0xFF00D4AA), fontSize: 13),
+                        style: const TextStyle(
+                            color: Color(0xFF00D4AA), fontSize: 13),
                       ),
                     ),
                   ],

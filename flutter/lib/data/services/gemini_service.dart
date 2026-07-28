@@ -3,7 +3,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 class GeminiService {
   late final GenerativeModel _model;
   ChatSession? _chat;
-  String _modelName = 'models/gemini-2.5-flash-native-audio-preview';
+  final String _modelName = 'models/gemini-2.5-flash-native-audio-preview';
   bool _connected = false;
 
   bool get isConnected => _connected;
@@ -21,8 +21,10 @@ class GeminiService {
         safetySettings: [
           SafetySetting(HarmCategory.harassment, HarmBlockThreshold.medium),
           SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.medium),
-          SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.medium),
-          SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.medium),
+          SafetySetting(
+              HarmCategory.sexuallyExplicit, HarmBlockThreshold.medium),
+          SafetySetting(
+              HarmCategory.dangerousContent, HarmBlockThreshold.medium),
         ],
       );
 

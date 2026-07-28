@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -56,22 +57,25 @@ class FirebaseService {
 
   Future<List<Map<String, dynamic>>> loadConversation() async {
     try {
-      final doc = await _firestore.collection('memory').doc('conversation').get();
+      final doc =
+          await _firestore.collection('memory').doc('conversation').get();
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
-        if (data['turns'] is List) return List<Map<String, dynamic>>.from(data['turns']);
+        if (data['turns'] is List)
+          return List<Map<String, dynamic>>.from(data['turns']);
       }
     } catch (_) {}
 
     final prefs = await SharedPreferences.getInstance();
     final backup = prefs.getString('conversation_memory');
-    if (backup != null) return List<Map<String, dynamic>>.from(_deserialize(backup) ?? []);
+    if (backup != null)
+      return List<Map<String, dynamic>>.from(_deserialize(backup) ?? []);
 
     return [];
   }
 
   String _serialize(dynamic data) {
-    return DateTime.now().toIso8601String() + ':' + data.toString();
+    return '${DateTime.now().toIso8601String()}:$data';
   }
 
   dynamic _deserialize(String data) {

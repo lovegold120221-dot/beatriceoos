@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
-
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -89,7 +88,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               : null,
                           child: _avatarBase64 == null
                               ? Text(
-                                  _getInitials(user?.displayName ?? user?.email ?? 'U'),
+                                  _getInitials(
+                                      user?.displayName ?? user?.email ?? 'U'),
                                   style: const TextStyle(
                                     fontSize: 32,
                                     fontWeight: FontWeight.bold,
@@ -109,7 +109,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 color: Color(0xFF4F46E5),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                              child: const Icon(Icons.camera_alt,
+                                  size: 18, color: Colors.white),
                             ),
                           ),
                         ),
@@ -125,7 +126,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   color: Color(0xFFEF4444),
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.close, size: 14, color: Colors.white),
+                                child: const Icon(Icons.close,
+                                    size: 14, color: Colors.white),
                               ),
                             ),
                           ),
@@ -186,9 +188,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: const Icon(Icons.logout, size: 20),
                   label: const Text('Sign Out'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.withOpacity(0.15),
+                    backgroundColor: Colors.red.withValues(alpha: 0.15),
                     foregroundColor: const Color(0xFFFCA5A5),
-                    side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                    side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -209,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF16213E),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,7 +256,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+          Text(label,
+              style: const TextStyle(color: Colors.white, fontSize: 14)),
           Text(
             value,
             style: const TextStyle(

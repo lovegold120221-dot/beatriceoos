@@ -2,6 +2,8 @@
 ///
 /// Routes device control tasks dynamically to MobileUse or opencode CLI
 /// based on the detected device type and capabilities.
+library;
+
 import 'dart:convert';
 import 'dart:io';
 import 'device_control_service.dart';
@@ -102,7 +104,9 @@ DeviceCategory _inferCategory(String? model) {
   if (lower.contains('tv') || lower.contains('androidtv')) {
     return DeviceCategory.androidTv;
   }
-  if (lower.contains('tab') || lower.contains('tablet') || lower.contains('pad')) {
+  if (lower.contains('tab') ||
+      lower.contains('tablet') ||
+      lower.contains('pad')) {
     return DeviceCategory.androidTablet;
   }
   return DeviceCategory.androidPhone;
@@ -119,7 +123,7 @@ DeviceIdentity detectDeviceIdentity(Map<String, dynamic>? healthData) {
     deviceModel: model,
     androidVersion: healthData['android_version'] as String?,
     hasTermux: true, // MobileUse runs in Termux
-    hasAdb: true,    // MobileUse uses ADB
+    hasAdb: true, // MobileUse uses ADB
     hasOpencodeCli: healthData['has_opencode_cli'] == true,
     isPc: _inferCategory(model).isPc,
   );
@@ -217,7 +221,7 @@ Future<TaskResult> routeInstruction(
   }
 
   if (!deviceControl.isConnected) {
-    return TaskResult(
+    return const TaskResult(
       success: false,
       error: 'No device control service is available',
       path: ExecutionPath.none,
@@ -228,7 +232,8 @@ Future<TaskResult> routeInstruction(
     // Send the instruction as a Termux command on MobileUse
     // This allows running opencode via Termux proot Ubuntu
     final cmd = 'opencode --execute "${instruction.replaceAll('"', '\\"')}"';
-    final result = await deviceControl.executeAction('execute_command', {'cmd': cmd});
+    final result =
+        await deviceControl.executeAction('execute_command', {'cmd': cmd});
 
     return TaskResult(
       success: result['success'] == true,

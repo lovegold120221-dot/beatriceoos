@@ -17,7 +17,7 @@ class SettingsViewModel extends ChangeNotifier {
   String _userName = AppConstants.defaultUserName;
   String _agentName = AppConstants.defaultAgentName;
   Template _template = Template.customerSupport;
-  List<FunctionCall> _tools = [];
+  final List<FunctionCall> _tools = [];
   bool _isLoading = false;
   String _saveStatus = 'idle';
   String _statusMessage = '';
@@ -130,7 +130,8 @@ class SettingsViewModel extends ChangeNotifier {
   void toggleTool(String toolName) {
     final index = _tools.indexWhere((t) => t.name == toolName);
     if (index != -1) {
-      _tools[index] = _tools[index].copyWith(isEnabled: !_tools[index].isEnabled);
+      _tools[index] =
+          _tools[index].copyWith(isEnabled: !_tools[index].isEnabled);
       notifyListeners();
     }
   }

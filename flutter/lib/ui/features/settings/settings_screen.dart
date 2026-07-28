@@ -23,8 +23,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _urlController = TextEditingController(text: 'http://localhost:5000');
-    _opencodeUrlController = TextEditingController(text: 'http://localhost:5001');
-    _workspaceController = TextEditingController(text: '/storage/shared/MobileUse-Agent');
+    _opencodeUrlController =
+        TextEditingController(text: 'http://localhost:5001');
+    _workspaceController =
+        TextEditingController(text: '/storage/shared/MobileUse-Agent');
     _adbAddressController = TextEditingController();
     _adbPortController = TextEditingController(text: '5555');
     _loadSettings();
@@ -39,7 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<SettingsViewModel>();
-    final voices = const [
+    const voices = [
       {'name': 'Aoede', 'alias': 'Aoede'},
       {'name': 'Charon', 'alias': 'Charon'},
       {'name': 'Fenrir', 'alias': 'Fenrir'},
@@ -67,7 +69,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildDropdown<String>(
                       'Language',
                       vm.language,
-                      ['English', 'Flemish', 'Spanish', 'French', 'German', 'Japanese', 'Tagalog'],
+                      [
+                        'English',
+                        'Flemish',
+                        'Spanish',
+                        'French',
+                        'German',
+                        'Japanese',
+                        'Tagalog'
+                      ],
                       (v) => vm.setLanguage(v!),
                     ),
                     const SizedBox(height: 12),
@@ -81,7 +91,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildDropdown<String>(
                       'Nuance',
                       vm.nuance,
-                      ['Casual', 'Professional', 'Friendly', 'Calm', 'Technical', 'Playful'],
+                      [
+                        'Casual',
+                        'Professional',
+                        'Friendly',
+                        'Calm',
+                        'Technical',
+                        'Playful'
+                      ],
                       (v) => vm.setNuance(v!),
                     ),
                   ]),
@@ -89,7 +106,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildSection('Identity', [
                     _textField('How to call me', vm.userName, vm.setUserName),
                     const SizedBox(height: 12),
-                    _textField('How to call the Agent', vm.agentName, vm.setAgentName),
+                    _textField(
+                        'How to call the Agent', vm.agentName, vm.setAgentName),
                   ]),
                   const SizedBox(height: 24),
                   _buildSection('Template', [
@@ -105,12 +123,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                   // ─── Device Control Settings ───
                   InkWell(
-                    onTap: () => setState(() => _showDeviceSettings = !_showDeviceSettings),
+                    onTap: () => setState(
+                        () => _showDeviceSettings = !_showDeviceSettings),
                     child: Row(
                       children: [
-                        const Icon(Icons.phone_android, color: Color(0xFF00D4AA)),
+                        const Icon(Icons.phone_android,
+                            color: Color(0xFF00D4AA)),
                         const SizedBox(width: 8),
-                        Text(
+                        const Text(
                           'Mobile Device Control',
                           style: TextStyle(
                             fontSize: 16,
@@ -120,7 +140,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const Spacer(),
                         Icon(
-                          _showDeviceSettings ? Icons.expand_less : Icons.expand_more,
+                          _showDeviceSettings
+                              ? Icons.expand_less
+                              : Icons.expand_more,
                           color: Colors.grey,
                         ),
                       ],
@@ -135,7 +157,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: vm.saveStatus == 'saving' ? null : vm.saveSettings,
+                      onPressed:
+                          vm.saveStatus == 'saving' ? null : vm.saveSettings,
                       child: Text(
                         vm.saveStatus == 'saving'
                             ? 'Saving...'
@@ -157,7 +180,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF16213E),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF00D4AA).withOpacity(0.2)),
+        border:
+            Border.all(color: const Color(0xFF00D4AA).withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +220,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.03),
+              color: Colors.white.withValues(alpha: 0.03),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.white12),
             ),
@@ -212,9 +236,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                _permissionItem('Termux:API (F-Droid) — SMS, calls, camera, sensors'),
-                _permissionItem('ADB or Shizuku — Screen tap, swipe, app launch'),
-                _permissionItem('Storage Access — File read/write in workspace'),
+                _permissionItem(
+                    'Termux:API (F-Droid) — SMS, calls, camera, sensors'),
+                _permissionItem(
+                    'ADB or Shizuku — Screen tap, swipe, app launch'),
+                _permissionItem(
+                    'Storage Access — File read/write in workspace'),
               ],
             ),
           ),
@@ -229,9 +256,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('• ', style: TextStyle(color: Color(0xFF00D4AA), fontSize: 11)),
+          const Text('• ',
+              style: TextStyle(color: Color(0xFF00D4AA), fontSize: 11)),
           Expanded(
-            child: Text(text, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+            child: Text(text,
+                style: TextStyle(fontSize: 11, color: Colors.grey[500])),
           ),
         ],
       ),
@@ -242,7 +271,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 13, color: Colors.white70)),
+        Text(label,
+            style: const TextStyle(fontSize: 13, color: Colors.white70)),
         SizedBox(
           width: 44,
           height: 28,
@@ -256,7 +286,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _textField(String label, String value, Function(String) onChanged, {String? hint}) {
+  Widget _textField(String label, String value, Function(String) onChanged,
+      {String? hint}) {
     return TextField(
       controller: TextEditingController(text: value),
       decoration: InputDecoration(
@@ -296,7 +327,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String? Function(T?)? labelBuilder,
   }) {
     return DropdownButtonFormField<T>(
-      value: value,
+      initialValue: value,
       items: items.map((item) {
         return DropdownMenuItem(
           value: item,
@@ -305,7 +336,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }).toList(),
       onChanged: onChanged,
       style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(labelText: label, labelStyle: const TextStyle(fontSize: 12)),
+      decoration: InputDecoration(
+          labelText: label, labelStyle: const TextStyle(fontSize: 12)),
     );
   }
 
