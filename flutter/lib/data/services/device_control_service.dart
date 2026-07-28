@@ -12,7 +12,7 @@ class DeviceControlService {
   String _adbTcpIpPort = '5555';
   bool _shizukuEnabled = false;
   bool _accessibilityEnabled = false;
-  String _workspacePath = '/storage/shared/PocketStrike-AI';
+  String _workspacePath = '/storage/shared/MobileUse-Agent';
 
   DeviceControlService({String baseUrl = 'http://localhost:5000', String opencodeUrl = 'http://localhost:5001'})
       : _baseUrl = baseUrl,

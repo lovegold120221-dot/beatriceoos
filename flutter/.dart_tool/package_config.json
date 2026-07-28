@@ -512,42 +512,6 @@
       "languageVersion": "3.2"
     },
     {
-      "name": "permission_handler",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/permission_handler-11.4.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.5"
-    },
-    {
-      "name": "permission_handler_android",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/permission_handler_android-12.1.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.5"
-    },
-    {
-      "name": "permission_handler_apple",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/permission_handler_apple-9.4.10",
-      "packageUri": "lib/",
-      "languageVersion": "2.18"
-    },
-    {
-      "name": "permission_handler_html",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/permission_handler_html-0.1.3+5",
-      "packageUri": "lib/",
-      "languageVersion": "3.3"
-    },
-    {
-      "name": "permission_handler_platform_interface",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/permission_handler_platform_interface-4.3.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.5"
-    },
-    {
-      "name": "permission_handler_windows",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/permission_handler_windows-0.2.1",
-      "packageUri": "lib/",
-      "languageVersion": "2.12"
-    },
-    {
       "name": "petitparser",
       "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/petitparser-7.0.2",
       "packageUri": "lib/",
@@ -596,52 +560,10 @@
       "languageVersion": "3.6"
     },
     {
-      "name": "record",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/record-5.2.1",
-      "packageUri": "lib/",
-      "languageVersion": "3.4"
-    },
-    {
-      "name": "record_android",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/record_android-1.5.2",
-      "packageUri": "lib/",
-      "languageVersion": "3.5"
-    },
-    {
-      "name": "record_darwin",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/record_darwin-1.2.2",
-      "packageUri": "lib/",
-      "languageVersion": "3.3"
-    },
-    {
-      "name": "record_linux",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/record_linux-0.7.2",
-      "packageUri": "lib/",
-      "languageVersion": "3.3"
-    },
-    {
-      "name": "record_platform_interface",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/record_platform_interface-1.6.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.5"
-    },
-    {
       "name": "record_use",
       "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/record_use-0.6.0",
       "packageUri": "lib/",
       "languageVersion": "3.10"
-    },
-    {
-      "name": "record_web",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/record_web-1.3.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.5"
-    },
-    {
-      "name": "record_windows",
-      "rootUri": "file:///Users/masterdee/.pub-cache/hosted/pub.dev/record_windows-1.0.7",
-      "packageUri": "lib/",
-      "languageVersion": "3.5"
     },
     {
       "name": "shared_preferences",

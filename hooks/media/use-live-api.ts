@@ -178,7 +178,7 @@ export function useLiveApi({
               },
             });
           } else {
-            // Fallback to original PocketStrike if routing fails
+            // Fallback to original MobileUse if routing fails
             const { success: fallbackSuccess, result: fbResult, error: fbError } = await executeWithProgress(
               'mobile_use',
               fc.args as Record<string, unknown>,
@@ -189,7 +189,7 @@ export function useLiveApi({
               functionResponses.push({
                 id: fc.id,
                 name: fc.name,
-                response: { result: fbResult, execution_path: 'pocketstrike_fallback' },
+                response: { result: fbResult, execution_path: 'mobile_use_fallback' },
               });
             } else {
               functionResponses.push({

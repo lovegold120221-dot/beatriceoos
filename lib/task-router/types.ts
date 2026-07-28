@@ -20,7 +20,7 @@ export type DeviceCategory =
 /**
  * Available execution paths for device control tasks.
  */
-export type ExecutionPath = 'pocketstrike' | 'opencode_cli' | 'none' | 'pocketstrike_fallback';
+export type ExecutionPath = 'mobile_use' | 'opencode_cli' | 'none' | 'mobile_use_fallback';
 
 /**
  * Device identity info detected during health check.

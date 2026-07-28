@@ -50,7 +50,7 @@ class SettingsUseCase {
       case Template.navigationSystem:
         return 'You are a helpful and friendly navigation assistant. Provide clear and accurate directions.';
       case Template.deviceControl:
-        return 'You are Beatrice\'s device-control agent. When the user requests device actions, execute them using the integrated PocketStrike device layer. Verify results before confirming completion.';
+        return 'You are Beatrice\'s device-control agent. When the user requests device actions, execute them using the integrated MobileUse device layer. Verify results before confirming completion.';
     }
   }
 }

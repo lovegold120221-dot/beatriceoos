@@ -2,12 +2,12 @@
  * Device Detector
  *
  * Auto-detects device type and capabilities using:
- * 1. PocketStrike health check response (device model, Android version)
- * 2. Probing available paths (try PocketStrike → try opencode CLI → detect)
+ * 1. MobileUse health check response (device model, Android version)
+ * 2. Probing available paths (try MobileUse → try opencode CLI → detect)
  */
 
 import { DeviceCategory, DeviceIdentity, ExecutionPath } from './types';
-import { getPocketStrikeBridge } from '../pocketstrike/bridge';
+import { getMobileUseBridge } from '../mobile-use/bridge';
 import { getOpencodeBridge } from '../opencode/bridge';
 
 /**
@@ -30,7 +30,7 @@ function inferCategoryFromModel(model: string | null): DeviceCategory {
 }
 
 /**
- * Detects device identity from the PocketStrike health check response data.
+ * Detects device identity from the MobileUse health check response data.
  */
 export function detectDeviceIdentity(
   healthData: Record<string, unknown> | null
@@ -50,9 +50,9 @@ export function detectDeviceIdentity(
     deviceId,
     deviceModel,
     androidVersion,
-    hasTermux: true,   // PocketStrike runs in Termux, so Termux is available
+    hasTermux: true,   // MobileUse runs in Termux, so Termux is available
     hasProot: false,   // Unknown — would need probing
-    hasAdb: true,      // PocketStrike uses ADB for screen operations
+    hasAdb: true,      // MobileUse uses ADB for screen operations
     hasShizuku: false,  // Unknown
     hasOpencodeCli: false, // Unknown — probed separately
     isPc: category === 'linux_pc' || category === 'mac_pc' || category === 'windows_pc',
@@ -67,17 +67,17 @@ export async function probeAvailablePaths(): Promise<{
   path: ExecutionPath;
   identity: DeviceIdentity;
 }> {
-  const pocketStrike = getPocketStrikeBridge();
+  const mobileUse = getMobileUseBridge();
   const opencode = getOpencodeBridge();
 
-  // Try PocketStrike first (it's the primary path)
+  // Try MobileUse first (it's the primary path)
   let identity = createDefaultIdentity();
   let psConnected = false;
 
   try {
-    psConnected = await pocketStrike.connect();
+    psConnected = await mobileUse.connect();
     if (psConnected) {
-      const status = pocketStrike.getStatus();
+      const status = mobileUse.getStatus();
       identity = detectDeviceIdentity({
         device_id: status.deviceId,
         device_model: status.deviceModel,
@@ -103,12 +103,12 @@ export async function probeAvailablePaths(): Promise<{
   }
 
   if (psConnected && identity.hasTermux) {
-    // PocketStrike is available — maybe opencode can run via Termux
-    return { path: 'pocketstrike', identity };
+    // MobileUse is available — maybe opencode can run via Termux
+    return { path: 'mobile_use', identity };
   }
 
   if (psConnected) {
-    return { path: 'pocketstrike', identity };
+    return { path: 'mobile_use', identity };
   }
 
   return { path: 'none', identity };

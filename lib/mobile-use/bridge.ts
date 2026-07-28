@@ -4,25 +4,25 @@
  */
 import { DeviceAction, DeviceRequest } from './types';
 
-interface PocketStrikeStatus {
+interface MobileUseStatus {
   connected: boolean;
   deviceId: string | null;
   deviceModel: string | null;
   androidVersion: string | null;
 }
 
-interface PocketStrikeResult {
+interface MobileUseResult {
   success: boolean;
   data: unknown;
   error: string | null;
   verified: boolean;
 }
 
-class PocketStrikeBridge {
+class MobileUseBridge {
   private baseUrl: string;
   private connected: boolean = false;
-  private deviceInfo: PocketStrikeStatus | null = null;
-  private workspacePath: string = '/storage/shared/PocketStrike-AI';
+  private deviceInfo: MobileUseStatus | null = null;
+  private workspacePath: string = '/storage/shared/MobileUse-Agent';
 
   constructor(baseUrl?: string) {
     this.baseUrl = baseUrl || 'http://localhost:5000';
@@ -37,7 +37,7 @@ class PocketStrikeBridge {
   }
 
   setWorkspacePath(path: string): void {
-    this.workspacePath = path?.trim() || '/storage/shared/PocketStrike-AI';
+    this.workspacePath = path?.trim() || '/storage/shared/MobileUse-Agent';
   }
 
   getWorkspacePath(): string {
@@ -73,7 +73,7 @@ class PocketStrikeBridge {
         deviceModel: null,
         androidVersion: null,
       };
-      console.warn('PocketStrike bridge connection failed:', err);
+      console.warn('MobileUse bridge connection failed:', err);
       return false;
     }
   }
@@ -83,7 +83,7 @@ class PocketStrikeBridge {
     this.deviceInfo = null;
   }
 
-  getStatus(): PocketStrikeStatus {
+  getStatus(): MobileUseStatus {
     return this.deviceInfo || {
       connected: false,
       deviceId: null,
@@ -96,12 +96,12 @@ class PocketStrikeBridge {
     return this.connected && this.deviceInfo !== null && this.deviceInfo.connected;
   }
 
-  async executeAction(action: DeviceAction, request: DeviceRequest): Promise<PocketStrikeResult> {
+  async executeAction(action: DeviceAction, request: DeviceRequest): Promise<MobileUseResult> {
     if (!this.connected) {
       return {
         success: false,
         data: null,
-        error: 'PocketStrike bridge is not connected',
+        error: 'MobileUse bridge is not connected',
         verified: false,
       };
     }
@@ -140,71 +140,71 @@ class PocketStrikeBridge {
     }
   }
 
-  async tap(x: number, y: number): Promise<PocketStrikeResult> {
+  async tap(x: number, y: number): Promise<MobileUseResult> {
     return this.executeAction('tap', { x, y });
   }
 
-  async swipe(x1: number, y1: number, x2: number, y2: number, duration?: number): Promise<PocketStrikeResult> {
+  async swipe(x1: number, y1: number, x2: number, y2: number, duration?: number): Promise<MobileUseResult> {
     return this.executeAction('swipe', { x1, y1, x2, y2, duration });
   }
 
-  async typeText(text: string): Promise<PocketStrikeResult> {
+  async typeText(text: string): Promise<MobileUseResult> {
     return this.executeAction('type_text', { text });
   }
 
-  async launchApp(packageName: string): Promise<PocketStrikeResult> {
+  async launchApp(packageName: string): Promise<MobileUseResult> {
     return this.executeAction('launch_app', { packageName });
   }
 
-  async takeScreenshot(saveToWorkspace = false): Promise<PocketStrikeResult> {
+  async takeScreenshot(saveToWorkspace = false): Promise<MobileUseResult> {
     return this.executeAction('take_screenshot', { saveToWorkspace });
   }
 
-  async getUiLayout(): Promise<PocketStrikeResult> {
+  async getUiLayout(): Promise<MobileUseResult> {
     return this.executeAction('get_ui_layout', {});
   }
 
-  async getInstalledApps(userOnly = true): Promise<PocketStrikeResult> {
+  async getInstalledApps(userOnly = true): Promise<MobileUseResult> {
     return this.executeAction('get_installed_apps', { userOnly });
   }
 
-  async goHome(): Promise<PocketStrikeResult> {
+  async goHome(): Promise<MobileUseResult> {
     return this.executeAction('go_home', {});
   }
 
-  async goBack(): Promise<PocketStrikeResult> {
+  async goBack(): Promise<MobileUseResult> {
     return this.executeAction('go_back', {});
   }
 
-  async openUrl(url: string): Promise<PocketStrikeResult> {
+  async openUrl(url: string): Promise<MobileUseResult> {
     return this.executeAction('open_url', { url });
   }
 
-  async setBrightness(level: number): Promise<PocketStrikeResult> {
+  async setBrightness(level: number): Promise<MobileUseResult> {
     return this.executeAction('set_brightness', { level });
   }
 
-  async setVolume(stream: string, level: number): Promise<PocketStrikeResult> {
+  async setVolume(stream: string, level: number): Promise<MobileUseResult> {
     return this.executeAction('set_volume', { stream, level });
   }
 
-  async getScreenSize(): Promise<PocketStrikeResult> {
+  async getScreenSize(): Promise<MobileUseResult> {
     return this.executeAction('get_screen_size', {});
   }
 
-  async getClipboard(): Promise<PocketStrikeResult> {
+  async getClipboard(): Promise<MobileUseResult> {
     return this.executeAction('get_clipboard', {});
   }
 
-  async setClipboard(text: string): Promise<PocketStrikeResult> {
+  async setClipboard(text: string): Promise<MobileUseResult> {
     return this.executeAction('set_clipboard', { text });
   }
 
-  async notify(title: string, message: string): Promise<PocketStrikeResult> {
+  async notify(title: string, message: string): Promise<MobileUseResult> {
     return this.executeAction('notify', { title, message });
   }
 
-  async executeTermuxCommand(cmd: string): Promise<PocketStrikeResult> {
+  async executeTermuxCommand(cmd: string): Promise<MobileUseResult> {
 const blockedPatterns = [
       /rm\s+-rf\s+\//,
       /mkfs/,
@@ -230,17 +230,17 @@ const blockedPatterns = [
   }
 }
 
-let bridgeInstance: PocketStrikeBridge | null = null;
+let bridgeInstance: MobileUseBridge | null = null;
 
-export function getPocketStrikeBridge(baseUrl?: string): PocketStrikeBridge {
+export function getMobileUseBridge(baseUrl?: string): MobileUseBridge {
   if (!bridgeInstance) {
-    bridgeInstance = new PocketStrikeBridge(baseUrl);
+    bridgeInstance = new MobileUseBridge(baseUrl);
   }
   return bridgeInstance;
 }
 
-export function resetPocketStrikeBridge(): void {
+export function resetMobileUseBridge(): void {
   bridgeInstance = null;
 }
 
-export type { PocketStrikeStatus, PocketStrikeResult };
+export type { MobileUseStatus, MobileUseResult };

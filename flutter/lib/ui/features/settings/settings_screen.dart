@@ -24,7 +24,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     _urlController = TextEditingController(text: 'http://localhost:5000');
     _opencodeUrlController = TextEditingController(text: 'http://localhost:5001');
-    _workspaceController = TextEditingController(text: '/storage/shared/PocketStrike-AI');
+    _workspaceController = TextEditingController(text: '/storage/shared/MobileUse-Agent');
     _adbAddressController = TextEditingController();
     _adbPortController = TextEditingController(text: '5555');
     _loadSettings();
@@ -162,7 +162,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _textField('PocketStrike Server URL', _urlController.text, (v) {
+          _textField('MobileUse Server URL', _urlController.text, (v) {
             _urlController.text = v;
           }, hint: 'http://localhost:5000'),
           const SizedBox(height: 12),
@@ -172,7 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           _textField('Workspace Path', _workspaceController.text, (v) {
             _workspaceController.text = v;
-          }, hint: '/storage/shared/PocketStrike-AI'),
+          }, hint: '/storage/shared/MobileUse-Agent'),
           const SizedBox(height: 16),
           const Divider(color: Colors.white12),
           const SizedBox(height: 8),

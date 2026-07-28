@@ -1,25 +1,25 @@
 /**
  * Task Router
  *
- * Routes device control tasks dynamically to PocketStrike or opencode CLI
+ * Routes device control tasks dynamically to MobileUse or opencode CLI
  * based on the detected device type and capabilities.
  *
  * Flow:
  * 1. Beatrice identifies a task from user conversation
- * 2. Router determines which execution path to use (PocketStrike vs opencode CLI)
+ * 2. Router determines which execution path to use (MobileUse vs opencode CLI)
  * 3. Routes the task to the appropriate bridge
  * 4. Returns the result back to Beatrice
  */
 
 import { DeviceIdentity, ExecutionPath, RouteDecision, TaskResult, DeviceTask } from './types';
 import { probeAvailablePaths, createDefaultIdentity } from './device-detector';
-import { getPocketStrikeBridge } from '../pocketstrike/bridge';
+import { getMobileUseBridge } from '../mobile-use/bridge';
 import { getOpencodeBridge } from '../opencode/bridge';
 
 /**
- * Shared action map for PocketStrike task routing.
+ * Shared action map for MobileUse task routing.
  */
-const POCKETSTRIKE_ACTION_MAP: Record<string, string> = {
+const MOBILE_USE_ACTION_MAP: Record<string, string> = {
   tap: 'tap',
   swipe: 'swipe',
   type_text: 'type_text',
@@ -37,27 +37,27 @@ const POCKETSTRIKE_ACTION_MAP: Record<string, string> = {
 };
 
 /**
- * Executes a simple device task via PocketStrike bridge.
+ * Executes a simple device task via MobileUse bridge.
  */
-async function executePocketStrikeTask(
+async function executeMobileUseTask(
   task: DeviceTask,
-  path: ExecutionPath = 'pocketstrike'
+  path: ExecutionPath = 'mobile_use'
 ): Promise<TaskResult> {
-  const pocketStrike = getPocketStrikeBridge();
-  const action = POCKETSTRIKE_ACTION_MAP[task.type];
+  const mobileUse = getMobileUseBridge();
+  const action = MOBILE_USE_ACTION_MAP[task.type];
 
   if (!action) {
     return {
       success: false,
       data: null,
-      error: `Unknown task type for PocketStrike: ${task.type}`,
+      error: `Unknown task type for MobileUse: ${task.type}`,
       verified: false,
       path,
     };
   }
 
   const { type, ...request } = task;
-  const result = await pocketStrike.executeAction(action as any, request as any);
+  const result = await mobileUse.executeAction(action as any, request as any);
 
   return {
     success: result.success,
@@ -76,7 +76,7 @@ let currentIdentity: DeviceIdentity = createDefaultIdentity();
 /**
  * Currently active execution path.
  */
-let activePath: ExecutionPath = 'pocketstrike';
+let activePath: ExecutionPath = 'mobile_use';
 
 /**
  * Initializes the router by probing available paths.
@@ -127,7 +127,7 @@ export function decideRoute(task: DeviceTask): RouteDecision {
     path: activePath,
     reason: activePath === 'opencode_cli'
       ? 'Device has opencode CLI available'
-      : 'Using PocketStrike for Android device control',
+      : 'Using MobileUse for Android device control',
   };
 }
 
@@ -141,17 +141,17 @@ export async function routeTask(task: DeviceTask): Promise<TaskResult> {
   const isOpencodeUnavailable = decision.path === 'opencode_cli' && !getOpencodeBridge().isConnected();
 
   if (isPathNone || isOpencodeUnavailable) {
-    // Fallback: try PocketStrike if opencode is unavailable
-    if (decision.path === 'opencode_cli' && getPocketStrikeBridge().isConnected()) {
+    // Fallback: try MobileUse if opencode is unavailable
+    if (decision.path === 'opencode_cli' && getMobileUseBridge().isConnected()) {
       const bridge = getOpencodeBridge();
 
-      // Complex instructions: route opencode via PocketStrike's Termux command
+      // Complex instructions: route opencode via MobileUse's Termux command
       if (task.type === 'complex_instruction') {
-        return await bridge.executeViaPocketStrike(task.instruction);
+        return await bridge.executeViaMobileUse(task.instruction);
       }
 
-      // Simple tasks: route directly to PocketStrike
-      return await executePocketStrikeTask(task, 'pocketstrike_fallback');
+      // Simple tasks: route directly to MobileUse
+      return await executeMobileUseTask(task, 'mobile_use_fallback');
     }
 
     return {
@@ -174,11 +174,11 @@ export async function routeTask(task: DeviceTask): Promise<TaskResult> {
       return await bridge.executeTask(task);
     }
 
-    // Route to PocketStrike
+    // Route to MobileUse
     if (task.type === 'complex_instruction') {
-      // For complex instructions on PocketStrike, use the action map
-      const pocketStrike = getPocketStrikeBridge();
-      const result = await pocketStrike.executeAction(
+      // For complex instructions on MobileUse, use the action map
+      const mobileUse = getMobileUseBridge();
+      const result = await mobileUse.executeAction(
         'execute_command' as any,
         { cmd: `opencode --execute "${task.instruction.replace(/"/g, '\\"')}"` } as any
       );
@@ -188,11 +188,11 @@ export async function routeTask(task: DeviceTask): Promise<TaskResult> {
         data: result.data,
         error: result.error,
         verified: result.verified,
-        path: 'pocketstrike',
+        path: 'mobile_use',
       };
     }
 
-    return await executePocketStrikeTask(task, 'pocketstrike');
+    return await executeMobileUseTask(task, 'mobile_use');
   } catch (err) {
     return {
       success: false,

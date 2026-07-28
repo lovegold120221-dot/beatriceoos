@@ -3,7 +3,7 @@
  *
  * Adapter for the opencode CLI tool.
  *
- * On Android: Communicates via HTTP to PocketStrike server, which runs
+ * On Android: Communicates via HTTP to MobileUse server, which runs
  * opencode inside Termux proot Ubuntu using executeTermuxCommand.
  *
  * On PC: Communicates via HTTP to a local opencode server.
@@ -12,7 +12,7 @@
  */
 
 import { TaskResult, DeviceTask } from '../task-router/types';
-import { getPocketStrikeBridge } from '../pocketstrike/bridge';
+import { getMobileUseBridge } from '../mobile-use/bridge';
 
 /**
  * Opencode CLI bridge for executing device tasks.
@@ -112,7 +112,7 @@ class OpencodeBridge {
   /**
    * Execute a complex natural language instruction via opencode CLI.
    *
-   * On Android, this routes through PocketStrike's executeTermuxCommand
+   * On Android, this routes through MobileUse's executeTermuxCommand
    * which runs the opencode CLI inside Termux proot Ubuntu.
    *
    * On PC, this sends the instruction to the opencode HTTP server.
@@ -164,26 +164,26 @@ class OpencodeBridge {
   }
 
   /**
-   * For Android: runs opencode via PocketStrike's Termux command execution.
+   * For Android: runs opencode via MobileUse's Termux command execution.
    * This is called when the opencode HTTP server isn't available but
-   * PocketStrike is connected and Termux with proot Ubuntu is available.
+   * MobileUse is connected and Termux with proot Ubuntu is available.
    */
-  async executeViaPocketStrike(instruction: string): Promise<TaskResult> {
-    const pocketStrike = getPocketStrikeBridge();
+  async executeViaMobileUse(instruction: string): Promise<TaskResult> {
+    const mobileUse = getMobileUseBridge();
 
-    if (!pocketStrike.isConnected()) {
+    if (!mobileUse.isConnected()) {
       return {
         success: false,
         data: null,
-        error: 'PocketStrike bridge is not connected — cannot route opencode via Termux',
+        error: 'MobileUse bridge is not connected — cannot route opencode via Termux',
         verified: false,
         path: 'opencode_cli',
       };
     }
 
     try {
-      // Run opencode inside Termux proot Ubuntu via PocketStrike's shell
-      const result = await pocketStrike.executeTermuxCommand(
+      // Run opencode inside Termux proot Ubuntu via MobileUse's shell
+      const result = await mobileUse.executeTermuxCommand(
         `proot-distro login ubuntu -- bash -c "opencode --execute '${instruction.replace(/'/g, "'\\''")}'"`
       );
 
@@ -198,7 +198,7 @@ class OpencodeBridge {
       return {
         success: false,
         data: null,
-        error: err instanceof Error ? err.message : 'Unknown opencode via PocketStrike error',
+        error: err instanceof Error ? err.message : 'Unknown opencode via MobileUse error',
         verified: false,
         path: 'opencode_cli',
       };

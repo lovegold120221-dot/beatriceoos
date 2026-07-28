@@ -70,8 +70,8 @@ export const useSettings = create<{
  * Device Control Settings
  */
 export const useDeviceControl = create<{
-  pocketStrikeUrl: string;
-  pocketStrikeConnected: boolean;
+  mobileUseUrl: string;
+  mobileUseConnected: boolean;
   adbEnabled: boolean;
   adbRootEnabled: boolean;
   adbTcpIpEnabled: boolean;
@@ -84,8 +84,8 @@ export const useDeviceControl = create<{
   activeExecutionPath: string;
   opencodeUrl: string;
   opencodeConnected: boolean;
-  setPocketStrikeUrl: (url: string) => void;
-  setPocketStrikeConnected: (connected: boolean) => void;
+  setMobileUseUrl: (url: string) => void;
+  setMobileUseConnected: (connected: boolean) => void;
   setAdbEnabled: (enabled: boolean) => void;
   setAdbRootEnabled: (enabled: boolean) => void;
   setAdbTcpIpEnabled: (enabled: boolean) => void;
@@ -99,8 +99,8 @@ export const useDeviceControl = create<{
   setOpencodeUrl: (url: string) => void;
   setOpencodeConnected: (connected: boolean) => void;
 }>(set => ({
-  pocketStrikeUrl: 'http://localhost:5000',
-  pocketStrikeConnected: false,
+  mobileUseUrl: 'http://localhost:5000',
+  mobileUseConnected: false,
   adbEnabled: true,
   adbRootEnabled: false,
   adbTcpIpEnabled: false,
@@ -108,13 +108,13 @@ export const useDeviceControl = create<{
   adbTcpIpPort: '5555',
   shizukuEnabled: false,
   accessibilityServiceEnabled: false,
-  workspacePath: '/storage/shared/PocketStrike-AI',
+  workspacePath: '/storage/shared/MobileUse-Agent',
   deviceCategory: 'unknown',
-  activeExecutionPath: 'pocketstrike',
+  activeExecutionPath: 'mobile_use',
   opencodeUrl: 'http://localhost:5001',
   opencodeConnected: false,
-  setPocketStrikeUrl: url => set({ pocketStrikeUrl: url }),
-  setPocketStrikeConnected: connected => set({ pocketStrikeConnected: connected }),
+  setMobileUseUrl: url => set({ mobileUseUrl: url }),
+  setMobileUseConnected: connected => set({ mobileUseConnected: connected }),
   setAdbEnabled: enabled => set({ adbEnabled: enabled }),
   setAdbRootEnabled: enabled => set({ adbRootEnabled: enabled }),
   setAdbTcpIpEnabled: enabled => set({ adbTcpIpEnabled: enabled }),

@@ -9,7 +9,7 @@ import { useLiveAPIContext } from '@/contexts/LiveAPIContext';
 import { useState, useEffect, useCallback } from 'react';
 import ToolEditorModal from './ToolEditorModal';
 import { saveSettingsToFirebase, loadSettingsFromFirebase } from '@/lib/firebase';
-import { getPocketStrikeBridge } from '@/lib/pocketstrike/bridge';
+import { getMobileUseBridge } from '@/lib/mobile-use/bridge';
 
 const AVAILABLE_MODELS = [
   DEFAULT_LIVE_API_MODEL
@@ -36,8 +36,8 @@ export default function Sidebar() {
   const { tools, toggleTool, addTool, removeTool, updateTool, setTools } = useTools();
   const { connected } = useLiveAPIContext();
   const {
-    pocketStrikeUrl,
-    pocketStrikeConnected,
+    mobileUseUrl,
+    mobileUseConnected,
     adbEnabled,
     adbRootEnabled,
     adbTcpIpEnabled,
@@ -46,8 +46,8 @@ export default function Sidebar() {
     shizukuEnabled,
     accessibilityServiceEnabled,
     workspacePath,
-    setPocketStrikeUrl,
-    setPocketStrikeConnected,
+    setMobileUseUrl,
+    setMobileUseConnected,
     setAdbEnabled,
     setAdbRootEnabled,
     setAdbTcpIpEnabled,
@@ -128,17 +128,17 @@ export default function Sidebar() {
   const handleTestConnection = useCallback(async () => {
     setPsConnecting(true);
     try {
-      const bridge = getPocketStrikeBridge();
-      bridge.setBaseUrl(pocketStrikeUrl);
+      const bridge = getMobileUseBridge();
+      bridge.setBaseUrl(mobileUseUrl);
       bridge.setWorkspacePath(workspacePath);
       const result = await bridge.connect();
-      setPocketStrikeConnected(result);
+      setMobileUseConnected(result);
     } catch {
-      setPocketStrikeConnected(false);
+      setMobileUseConnected(false);
     } finally {
       setPsConnecting(false);
     }
-  }, [pocketStrikeUrl, workspacePath, setPocketStrikeConnected]);
+  }, [mobileUseUrl, workspacePath, setMobileUseConnected]);
 
   const handleSaveTool = (updatedTool: FunctionCall) => {
     if (editingTool) {
@@ -293,12 +293,12 @@ export default function Sidebar() {
 
             <fieldset disabled={connected}>
               <label style={{ marginTop: '4px' }}>
-                PocketStrike Server URL
+                MobileUse Server URL
                 <input
                   type="text"
-                  value={pocketStrikeUrl}
+                  value={mobileUseUrl}
                   placeholder="http://localhost:5000"
-                  onChange={e => setPocketStrikeUrl(e.target.value)}
+                  onChange={e => setMobileUseUrl(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '8px 12px',
@@ -317,7 +317,7 @@ export default function Sidebar() {
                 <input
                   type="text"
                   value={workspacePath}
-                  placeholder="/storage/shared/PocketStrike-AI"
+                  placeholder="/storage/shared/MobileUse-Agent"
                   onChange={e => setWorkspacePath(e.target.value)}
                   style={{
                     width: '100%',
@@ -450,9 +450,9 @@ export default function Sidebar() {
             <div className="device-connection-status" style={{ marginTop: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className={`ps-status-dot ${pocketStrikeConnected ? 'connected' : 'disconnected'}`}></span>
-                  <span style={{ fontSize: '12px', color: pocketStrikeConnected ? 'rgba(164, 231, 118, 0.9)' : 'rgba(255, 255, 255, 0.4)' }}>
-                    PocketStrike {pocketStrikeConnected ? 'Connected' : 'Disconnected'}
+                  <span className={`ps-status-dot ${mobileUseConnected ? 'connected' : 'disconnected'}`}></span>
+                  <span style={{ fontSize: '12px', color: mobileUseConnected ? 'rgba(164, 231, 118, 0.9)' : 'rgba(255, 255, 255, 0.4)' }}>
+                    MobileUse {mobileUseConnected ? 'Connected' : 'Disconnected'}
                   </span>
                 </div>
                 <button
@@ -460,7 +460,7 @@ export default function Sidebar() {
                   disabled={psConnecting || connected}
                   className="ps-test-button"
                 >
-                  {psConnecting ? 'Connecting...' : pocketStrikeConnected ? 'Reconnect' : 'Connect'}
+                  {psConnecting ? 'Connecting...' : mobileUseConnected ? 'Reconnect' : 'Connect'}
                 </button>
               </div>
             </div>

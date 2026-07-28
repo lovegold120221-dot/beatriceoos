@@ -4,9 +4,9 @@
  */
 import { FunctionResponseScheduling } from '@google/genai';
 import { FunctionCall } from '../state';
-import { getPocketStrikeBridge } from '../pocketstrike/bridge';
+import { getMobileUseBridge } from '../mobile-use/bridge';
 
-const bridge = getPocketStrikeBridge();
+const bridge = getMobileUseBridge();
 
 function ensureBridgeConnected(): Promise<boolean> {
   return bridge.connect();
@@ -20,7 +20,7 @@ export async function executeWithProgress(
   const connected = await ensureBridgeConnected();
 
   if (!connected) {
-    return { success: false, result: null, error: 'PocketStrike device bridge is not connected', verified: false };
+    return { success: false, result: null, error: 'MobileUse device bridge is not connected', verified: false };
   }
 
   const result = await bridge.executeAction(action as string, request as Record<string, unknown>);
@@ -263,7 +263,7 @@ export const deviceControlTools: FunctionCall[] = [
   },
   {
     name: 'mobile_use',
-    description: 'Use the PocketStrike-AI mobile use agent to perform complex tasks on the authorized mobile device.',
+    description: 'Use the MobileUse-Agent mobile use agent to perform complex tasks on the authorized mobile device.',
     parameters: {
       type: 'OBJECT',
       properties: {
