@@ -210,7 +210,7 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
 
   int get _effectiveMaxTokens {
     if (isNvidiaBaseUrl(_baseUrl) &&
-        _model == nvidiaDefaultModel &&
+        effectiveModel == nvidiaDefaultModel &&
         _maxTokens < 4096) {
       return 4096;
     }
@@ -230,8 +230,7 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
     'openrouter': openrouterDefaultModel,
   };
 
-  /// Known alias names (lowercase).
-  static Set<String> get knownAliases => aliasToModel.keys.toSet();
+
 
   /// Resolve an alias name to the actual API model name.
   /// If the name is not a known alias, returns it as-is (backwards compat).
