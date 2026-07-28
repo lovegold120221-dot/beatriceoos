@@ -242,15 +242,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$label: ',
+            label,
             style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
           ),
-          const Text(
-            '',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-          ),
+          const SizedBox(width: 6),
           Expanded(
             child: Text(
               value,

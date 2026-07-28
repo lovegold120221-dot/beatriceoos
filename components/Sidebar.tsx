@@ -302,7 +302,7 @@ export default function Sidebar() {
 
             <fieldset disabled={connected}>
               <label style={{ marginTop: '4px' }}>
-                MobileUse Server URL
+                Opencode Server URL
                 <input
                   type="text"
                   value={mobileUseUrl}
@@ -326,7 +326,7 @@ export default function Sidebar() {
                 <input
                   type="text"
                   value={workspacePath}
-                  placeholder="/storage/shared/MobileUse-Agent"
+                  placeholder="/storage/shared/opencode"
                   onChange={e => setWorkspacePath(e.target.value)}
                   style={{
                     width: '100%',
@@ -461,7 +461,7 @@ export default function Sidebar() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span className={`ps-status-dot ${mobileUseConnected ? 'connected' : 'disconnected'}`}></span>
                   <span style={{ fontSize: '12px', color: mobileUseConnected ? 'rgba(164, 231, 118, 0.9)' : 'rgba(255, 255, 255, 0.4)' }}>
-                    MobileUse {mobileUseConnected ? 'Connected' : 'Disconnected'}
+                    Opencode {mobileUseConnected ? 'Connected' : 'Disconnected'}
                   </span>
                 </div>
                 <button

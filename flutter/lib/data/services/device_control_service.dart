@@ -28,7 +28,7 @@ class ConnectionDiagnostic {
 /// centralized logging — instead of a new `dart:io HttpClient` per call with
 /// no timeout and silently-swallowed errors.
 class DeviceControlService {
-  DeviceControlService(this._api, {String baseUrl = 'http://localhost:5000'})
+  DeviceControlService(this._api, {String baseUrl = 'http://localhost:4096'})
       : _baseUrl = baseUrl;
 
   final ApiClient _api;
@@ -41,7 +41,7 @@ class DeviceControlService {
   String _adbTcpIpPort = '5555';
   bool _shizukuEnabled = false;
   bool _accessibilityEnabled = false;
-  String _workspacePath = '/storage/shared/MobileUse-Agent';
+  String _workspacePath = '/storage/shared/opencode';
 
   bool get isConnected => _connected;
   String get baseUrl => _baseUrl;
@@ -183,9 +183,9 @@ class DeviceControlService {
         return const ConnectionDiagnostic(
           reachable: true,
           statusCode: 200,
-          serviceName: 'MobileUse-Agent',
+          serviceName: 'Opencode',
           errorType: 'ok',
-          detail: 'MobileUse-Agent is running and healthy.',
+          detail: 'Opencode server is running and healthy.',
         );
       }
 
@@ -205,7 +205,7 @@ class DeviceControlService {
         statusCode: null,
         serviceName: null,
         errorType: 'unreachable',
-        detail: 'Cannot reach $_baseUrl. Make sure MobileUse-Agent is running on your device and the port is forwarded (adb reverse tcp:5000 tcp:5000).',
+        detail: 'Cannot reach $_baseUrl. Make sure Opencode is running in your Proot distro. Run: proot-distro login ubuntu && opencode server',
       );
     }
   }

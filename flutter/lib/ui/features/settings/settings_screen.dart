@@ -73,9 +73,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     _aiApiKeyController = TextEditingController();
     _aiBaseUrlController = TextEditingController();
     _aiModelController = TextEditingController();
-    _urlController = TextEditingController(text: 'http://localhost:5000');
+    _urlController = TextEditingController(text: 'http://localhost:4096');
     _workspaceController =
-        TextEditingController(text: '/storage/shared/MobileUse-Agent');
+        TextEditingController(text: '/storage/shared/opencode');
     _adbAddressController = TextEditingController();
     _adbPortController = TextEditingController(text: '5555');
     _loadSettings();
@@ -569,8 +569,8 @@ class _SettingsScreenState extends State<SettingsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Server URL ──
-          _field(_urlController, 'MobileUse Server URL',
-              hint: 'http://localhost:5000',
+          _field(_urlController, 'Opencode Server URL',
+              hint: 'http://localhost:4096',
               onChanged: (v) =>
                   vm.setDeviceControl(dc.copyWith(mobileUseUrl: v))),
           const SizedBox(height: 12),
@@ -694,8 +694,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           Expanded(
             child: Text(
               isConnected
-                  ? 'MobileUse Connected'
-                  : 'MobileUse Disconnected',
+                  ? 'Opencode Connected'
+                  : 'Opencode Disconnected',
               style: TextStyle(
                 fontSize: 12,
                 color: isConnected
@@ -784,7 +784,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           if (isUnreachable) ...[
             const SizedBox(height: 6),
             Text(
-              'Make sure MobileUse-Agent is running on your device and the port is forwarded (adb reverse tcp:5000 tcp:5000).',
+              'Make sure Opencode is running in your Proot distro and accessible (port 4096). Run: proot-distro login ubuntu && opencode server',
               style: TextStyle(
                   fontSize: 10,
                   color: Colors.grey[500]),
@@ -899,8 +899,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           const SizedBox(height: 12),
           if (!isRunning && !isChecking) ...[
             const Text(
-              'Screen Control lets Beatrice read your screen and tap, scroll, '
-              'and type in other apps on your behalf.\n\n'
+              'Opencode lets Beatrice control your phone through its Proot-distro '
+              'server — reading screens, tapping, scrolling, and typing in apps.\n\n'
               'Tap below to open Accessibility Settings, then find '
               '"Beatrice Screen Control" and enable it.',
               style: TextStyle(fontSize: 12, color: Colors.white70),

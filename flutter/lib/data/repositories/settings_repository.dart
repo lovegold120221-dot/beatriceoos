@@ -171,8 +171,8 @@ class DeviceControlSettings {
   final bool accessibilityServiceEnabled;
 
   const DeviceControlSettings({
-    this.mobileUseUrl = 'http://localhost:5000',
-    this.workspacePath = '/storage/shared/MobileUse-Agent',
+    this.mobileUseUrl = 'http://localhost:4096',
+    this.workspacePath = '/storage/shared/opencode',
     this.adbEnabled = true,
     this.adbRootEnabled = false,
     this.adbTcpIpEnabled = false,
@@ -184,8 +184,8 @@ class DeviceControlSettings {
 
   factory DeviceControlSettings.fromJson(Map<String, dynamic> json) =>
       DeviceControlSettings(
-        mobileUseUrl: (json['mobileUseUrl'] as String?) ?? 'http://localhost:5000',
-        workspacePath: (json['workspacePath'] as String?) ?? '/storage/shared/MobileUse-Agent',
+        mobileUseUrl: (json['mobileUseUrl'] as String?) ?? 'http://localhost:4096',
+        workspacePath: (json['workspacePath'] as String?) ?? '/storage/shared/opencode',
         adbEnabled: (json['adbEnabled'] as bool?) ?? true,
         adbRootEnabled: (json['adbRootEnabled'] as bool?) ?? false,
         adbTcpIpEnabled: (json['adbTcpIpEnabled'] as bool?) ?? false,

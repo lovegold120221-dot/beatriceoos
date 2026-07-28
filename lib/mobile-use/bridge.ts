@@ -30,10 +30,10 @@ class MobileUseBridge {
   private baseUrl: string;
   private connected: boolean = false;
   private deviceInfo: MobileUseStatus | null = null;
-  private workspacePath: string = '/storage/shared/MobileUse-Agent';
+  private workspacePath: string = '/storage/shared/opencode';
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || 'http://localhost:5000';
+    this.baseUrl = baseUrl || 'http://localhost:4096';
   }
 
   setBaseUrl(url: string): void {
@@ -45,7 +45,7 @@ class MobileUseBridge {
   }
 
   setWorkspacePath(path: string): void {
-    this.workspacePath = path?.trim() || '/storage/shared/MobileUse-Agent';
+    this.workspacePath = path?.trim() || '/storage/shared/opencode';
   }
 
   getWorkspacePath(): string {
@@ -101,9 +101,9 @@ class MobileUseBridge {
         return {
           reachable: true,
           statusCode: 200,
-          serviceName: 'MobileUse-Agent',
+          serviceName: 'Opencode',
           errorType: 'ok',
-          detail: 'MobileUse-Agent is running and healthy.',
+          detail: 'Opencode server is running and healthy.',
         };
       }
 
@@ -127,7 +127,7 @@ class MobileUseBridge {
         errorType: serviceName ? 'port_conflict' : 'bad_response',
         detail: serviceName
           ? `Port ${this.baseUrl.replace(/^.*:/, '')} is in use by ${serviceName} (HTTP ${response.status}).`
-          : `Port ${this.baseUrl.replace(/^.*:/, '')} responded with HTTP ${response.status}, but not with MobileUse-Agent.`,
+          : `Port ${this.baseUrl.replace(/^.*:/, '')} responded with HTTP ${response.status}, but not with Opencode.`,
       };
     } catch (err) {
       // No response at all — port is open (nothing listening), or connection refused
@@ -136,7 +136,7 @@ class MobileUseBridge {
         statusCode: null,
         serviceName: null,
         errorType: 'unreachable',
-        detail: `Cannot reach ${this.baseUrl}. Make sure MobileUse-Agent is running on your device and the port is forwarded (adb reverse tcp:5000 tcp:5000).`,
+        detail: `Cannot reach ${this.baseUrl}. Make sure Opencode is running in your Proot distro. Run: proot-distro login ubuntu && opencode server`,
       };
     }
   }

@@ -115,7 +115,10 @@ class ChatViewModel extends ChangeNotifier {
     // Followed by the full knowledge base (so templates and Firebase-loaded
     // settings never lose identity details), then the persona/template prompt.
     final buffer = StringBuffer();
+    // Prompt structure: identity override → human speech rules → knowledge base → system prompt
     buffer.write(shortIdentityOverride);
+    buffer.write('\n\n');
+    buffer.write(humanSpeechRules);
     buffer.write('\n\n');
     buffer.write(beatriceKnowledgeBase);
     buffer.write('\n\n');

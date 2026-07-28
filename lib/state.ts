@@ -91,7 +91,7 @@ export const useDeviceControl = create<{
   setAccessibilityServiceEnabled: (enabled: boolean) => void;
   setWorkspacePath: (path: string) => void;
 }>(set => ({
-  mobileUseUrl: 'http://localhost:5000',
+  mobileUseUrl: 'http://localhost:4096',
   mobileUseConnected: false,
   adbEnabled: true,
   adbRootEnabled: false,
@@ -100,7 +100,7 @@ export const useDeviceControl = create<{
   adbTcpIpPort: '5555',
   shizukuEnabled: false,
   accessibilityServiceEnabled: false,
-  workspacePath: '/storage/shared/MobileUse-Agent',
+  workspacePath: '/storage/shared/opencode',
   setMobileUseUrl: url => set({ mobileUseUrl: url }),
   setMobileUseConnected: connected => set({ mobileUseConnected: connected }),
   setAdbEnabled: enabled => set({ adbEnabled: enabled }),

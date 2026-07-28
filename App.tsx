@@ -8,7 +8,7 @@ import { useUI, useSettings, useTools, useLogStore, ConversationTurn } from './l
 import { Modality, LiveServerContent } from '@google/genai';
 import { loadConversationFromFirebase, saveConversationToFirebase, SavedTurn } from './lib/firebase';
 import { useAuthStore } from './lib/auth-store';
-import { BEATRICE_KNOWLEDGE_BASE, SHORT_IDENTITY_OVERRIDE } from "./lib/knowledge-base";
+import { BEATRICE_KNOWLEDGE_BASE, SHORT_IDENTITY_OVERRIDE, HUMAN_SPEECH_OVERRIDE } from "./lib/knowledge-base";
 import { deviceControlTools } from './lib/tools/device-control';
 import AuthProvider, { useAuth } from './components/auth/AuthProvider';
 
@@ -104,11 +104,20 @@ function BeatriceContent() {
           parameters: tool.parameters,
           }],
         }));
-// SHORT_IDENTITY_OVERRIDE MUST be the VERY FIRST thing the model sees so it
-// overrides the baked-in identity before any other instructions. Followed by
-// the full knowledge base (so template mode never loses identity details),
-// then template/persona instructions from systemPrompt.
+// ─────────────────────────────────────────────────────────────────────────────
+// PROMPT STRUCTURE (3 layers, all mandatory):
+//
+//   1st — IDENTITY OVERRIDE  (who you are, who created you)
+//   2nd — HUMAN SPEECH RULES (how you must / must NOT sound)
+//   3rd — KNOWLEDGE BASE     (company facts, identity reference)
+//   4th — SYSTEM PROMPT      (template/persona instructions)
+//
+// Layer order is deliberate: identity → speech style → knowledge → persona.
+// All three must always be present to prevent model defaults from leaking.
+// ─────────────────────────────────────────────────────────────────────────────
 let effectiveSystemPrompt = `${SHORT_IDENTITY_OVERRIDE}
+
+${HUMAN_SPEECH_OVERRIDE}
 
 ${BEATRICE_KNOWLEDGE_BASE}
 
@@ -139,9 +148,10 @@ Address the user as "${currentUserName}". Dynamically pick up on a topic, questi
 Vary your tone, greeting, and phrasing dynamically every session so it feels fresh, natural, and personable.`;
 
     // Log the FIRST 500 chars of the system prompt to verify identity override is present.
-    console.log('[BEATRICE_SYSPROMPT] START ---', effectiveSystemPrompt.slice(0, 500));
+    console.log('[BEATRICE_SYSPROMPT] START ---', effectiveSystemPrompt.slice(0, 680));
     console.log('[BEATRICE_SYSPROMPT] has MORTAL SINS:', effectiveSystemPrompt.includes('MORTAL SINS'));
     console.log('[BEATRICE_SYSPROMPT] has IDENTITY OVERRIDE:', effectiveSystemPrompt.includes('ABSOLUTE IDENTITY OVERRIDE'));
+    console.log('[BEATRICE_SYSPROMPT] has HUMAN-SPEECH OVERRIDE:', effectiveSystemPrompt.includes('ABSOLUTE HUMAN-SPEECH OVERRIDE'));
     console.log('[BEATRICE_SYSPROMPT] length:', effectiveSystemPrompt.length);
 
     setConfig({
