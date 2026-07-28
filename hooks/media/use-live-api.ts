@@ -78,8 +78,9 @@ export function useLiveApi({
           .catch(err => {
             console.error('Error adding worklet:', err);
           });
-    }
-  }, [audioStreamerRef]);
+        });
+      }
+    }, [audioStreamerRef]);
 
   // Maintain WakeLock and keep AudioContext active in background tabs
   useEffect(() => {
@@ -151,7 +152,9 @@ export function useLiveApi({
 
       for (const fc of toolCall.functionCalls) {
         // Log the function call trigger
-        const triggerMessage = ;
+        const triggerMessage = `Triggering function call: **${
+          fc.name
+        }**\n\`\`\`json\n${JSON.stringify(fc.args, null, 2)}\n\`\`\``;
         useLogStore.getState().addTurn({
           role: 'system',
           text: triggerMessage,
@@ -162,7 +165,7 @@ export function useLiveApi({
           const { success, result, error } = await executeWithProgress(
             'mobile_use',
             fc.args as Record<string, unknown>,
-            
+            `Executing mobile use agent for instruction: ${fc.args.instruction}`
           );
 
           if (success) {
@@ -190,7 +193,11 @@ export function useLiveApi({
 
       // Log the function call response
       if (functionResponses.length > 0) {
-        const responseMessage = ;
+        const responseMessage = `Function call response:\n\`\`\`json\n${JSON.stringify(
+          functionResponses,
+          null,
+          2,
+        )}\n\`\`\``;
         useLogStore.getState().addTurn({
           role: 'system',
           text: responseMessage,
