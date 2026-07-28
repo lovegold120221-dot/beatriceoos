@@ -75,8 +75,8 @@ export default function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
   };
 
   return (
-    <div className="drawer-overlay full-screen" onClick={onClose}>
-      <div className="drawer-content chat-drawer full-screen" onClick={e => e.stopPropagation()}>
+    <div className="drawer-overlay full-screen" onClick={onClose} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 50, display: "flex", alignItems: "stretch" }}>
+      <div className="drawer-content chat-drawer full-screen" onClick={e => e.stopPropagation()} style={{ display: "flex", flexDirection: "column", height: "100vh", width: "100vw", position: "fixed", top: 0, left: 0, bottom: 0, right: 0, zIndex: 51 }}>
         <div className="drawer-header">
           <div className="drawer-title">
             <h3>Conversation</h3>
@@ -112,7 +112,7 @@ export default function ChatDrawer({ isOpen, onClose }: ChatDrawerProps) {
           </div>
         </div>
 
-        <div className="chat-messages" ref={scrollRef}>
+        <div className="chat-messages" ref={scrollRef} style={{ flex: "1", overflowY: "auto" }}>
           {turns.length === 0 ? (
             <div className="empty-chat-state">
               <div className="empty-icon">💬</div>
