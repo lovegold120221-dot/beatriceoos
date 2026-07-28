@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/constants.dart';
-import '../../data/repositories/auth_repository.dart';
 import '../../domain/use_cases/auth_use_case.dart';
 import '../../domain/models/user_profile.dart';
 

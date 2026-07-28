@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../data/models/conversation_turn.dart';
 import '../../core/constants.dart';
+import '../../data/services/gemini_service.dart';
+import 'auth_viewmodel.dart';
+import 'settings_viewmodel.dart';
 
 class ChatViewModel extends ChangeNotifier {
   final AuthViewModel _authViewModel;
@@ -90,7 +93,16 @@ class ChatViewModel extends ChangeNotifier {
     ));
     notifyListeners();
 
-    await _geminiService.sendMessage(text);
+    final response = await _geminiService.sendMessage(text);
+    if (response != null && response.isNotEmpty) {
+      _turns.add(ConversationTurn(
+        timestamp: DateTime.now(),
+        role: 'assistant',
+        text: response,
+        isFinal: true,
+      ));
+      notifyListeners();
+    }
   }
 
   Future<void> sendAudio(List<int> audioData) async {

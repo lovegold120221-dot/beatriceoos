@@ -1,13 +1,19 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/function_call_model.dart';
+import '../models/template_model.dart';
 
 class SettingsRepository {
   static const String _settingsKey = 'beatrice_settings';
   static const String _templateKey = 'beatrice_template';
 
-  final SharedPreferences _prefs;
+  SharedPreferences? _cachedPrefs;
 
-  SettingsRepository({SharedPreferences? prefs}) : _prefs = prefs ?? SharedPreferences.getInstance();
+  SettingsRepository();
+
+  Future<SharedPreferences> get _prefs async {
+    _cachedPrefs ??= await SharedPreferences.getInstance();
+    return _cachedPrefs!;
+  }
 
   Future<void> saveSettings({
     required String systemPrompt,
@@ -19,6 +25,7 @@ class SettingsRepository {
     required String agentName,
     required List<FunctionCall> tools,
   }) async {
+    final prefs = await _prefs;
     final data = {
       'systemPrompt': systemPrompt,
       'model': model,
@@ -36,31 +43,30 @@ class SettingsRepository {
       }).toList(),
       'updatedAt': DateTime.now().toIso8601String(),
     };
-    await _prefs.setString(_settingsKey, _serialize(data));
+    await prefs.setString(_settingsKey, data.toString());
   }
 
   Future<Map<String, dynamic>?> loadSettings() async {
-    final raw = _prefs.getString(_settingsKey);
+    final prefs = await _prefs;
+    final raw = prefs.getString(_settingsKey);
     if (raw == null) return null;
     return _deserialize(raw);
   }
 
   Future<void> saveTemplate(Template template) async {
-    await _prefs.setString(_templateKey, template.name);
+    final prefs = await _prefs;
+    await prefs.setString(_templateKey, template.name);
   }
 
   Future<Template?> loadTemplate() async {
-    final raw = _prefs.getString(_templateKey);
+    final prefs = await _prefs;
+    final raw = prefs.getString(_templateKey);
     if (raw == null) return null;
     try {
       return Template.values.firstWhere((t) => t.name == raw);
     } catch (_) {
       return null;
     }
-  }
-
-  String _serialize(Map<String, dynamic> data) {
-    return data.toString();
   }
 
   Map<String, dynamic> _deserialize(String data) {

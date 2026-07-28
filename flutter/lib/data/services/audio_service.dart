@@ -1,58 +1,63 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class AudioService {
-  final Record _recorder = Record();
+  final AudioRecorder _recorder = AudioRecorder();
   bool _isRecording = false;
-  Stream<Uint8List>? _audioStream;
-  late StreamSubscription<Uint8List>? _streamSubscription;
+  StreamSubscription<Uint8List>? _streamSubscription;
 
   bool get isRecording => _isRecording;
 
   Future<bool> requestPermissions() async {
     final micStatus = await Permission.microphone.request();
     final cameraStatus = await Permission.camera.request();
-    final speakerStatus = await Permission.speaker.request();
     return micStatus.isGranted && cameraStatus.isGranted;
   }
 
-  Future<void> startRecording() async {
-    if (_isRecording) return;
+  Future<Stream<Uint8List>?> startRecordingStream() async {
+    if (_isRecording) return null;
     final granted = await requestPermissions();
     if (!granted) throw Exception('Microphone permission denied');
 
-    await _recorder.start(
+    final hasPermission = await _recorder.hasPermission();
+    if (!hasPermission) throw Exception('Recording permission denied');
+
+    final config = RecordConfig(
       encoder: AudioEncoder.pcm16bits,
-      samplingRate: 16000,
+      sampleRate: 16000,
       numChannels: 1,
-      bitRate: 64000,
     );
+
+    final stream = await _recorder.startStream(config);
     _isRecording = true;
+    return stream;
   }
 
   Future<Uint8List> stopRecording() async {
     if (!_isRecording) return Uint8List(0);
     _isRecording = false;
-    final audio = await _recorder.stop();
-    return audio ?? Uint8List(0);
-  }
-
-  Stream<Uint8List>? get audioStream {
-    if (_audioStream == null) {
-      _audioStream = _recorder.onRecordingStatusChanged.map((status) {
-        if (status is RecordingStatus) {
-          return status.buffer;
+    await _streamSubscription?.cancel();
+    _streamSubscription = null;
+    final path = await _recorder.stop();
+    if (path != null) {
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          return await file.readAsBytes();
         }
-        return Uint8List(0);
-      });
+      } catch (_) {}
     }
-    return _audioStream;
+    return Uint8List(0);
   }
 
   Future<void> dispose() async {
-    if (_isRecording) await stopRecording();
-    await _recorder.dispose();
+    if (_isRecording) {
+      await _recorder.stop();
+      _isRecording = false;
+    }
+    await _streamSubscription?.cancel();
   }
 }

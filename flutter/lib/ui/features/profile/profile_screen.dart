@@ -1,9 +1,61 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
-class ProfileScreen extends StatelessWidget {
+
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  String? _avatarBase64;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvatar();
+  }
+
+  Future<void> _loadAvatar() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/beatrice_avatar.txt');
+      if (await file.exists()) {
+        final data = await file.readAsString();
+        setState(() => _avatarBase64 = data);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _pickAndSaveAvatar() async {
+    // This method is already async
+    // For mobile, we'd use image_picker package
+    // For now, show a dialog explaining how to set avatar
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Avatar upload coming soon — add image_picker package'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _removeAvatar() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/beatrice_avatar.txt');
+      if (await file.exists()) {
+        await file.delete();
+      }
+      setState(() => _avatarBase64 = null);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,66 +70,130 @@ class ProfileScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: SafeArea(
         child: Column(
           children: [
-            CircleAvatar(
-              radius: 48,
-              backgroundColor: const Color(0xFF4F46E5),
-              child: Text(
-                _getInitials(user?.displayName ?? user?.email ?? 'U'),
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    // Avatar with camera overlay
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 48,
+                          backgroundColor: const Color(0xFF00D4AA),
+                          backgroundImage: _avatarBase64 != null
+                              ? MemoryImage(base64Decode(_avatarBase64!))
+                              : null,
+                          child: _avatarBase64 == null
+                              ? Text(
+                                  _getInitials(user?.displayName ?? user?.email ?? 'U'),
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: _pickAndSaveAvatar,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF4F46E5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                        if (_avatarBase64 != null)
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: _removeAvatar,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFEF4444),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close, size: 14, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      user?.displayName ?? 'User',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      user?.email ?? 'No email',
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Provider: ${user?.provider ?? 'N/A'}',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Account Details
+                    _buildSection('Account Details', [
+                      _buildDetailRow('User ID', user?.uid ?? 'N/A'),
+                      _buildDetailRow('Authentication Status', 'Verified'),
+                    ]),
+                    const SizedBox(height: 16),
+
+                    // Usage Stats
+                    _buildSection('Usage', [
+                      _buildStatRow('Sessions', '--'),
+                      _buildStatRow('Messages', '--'),
+                      _buildStatRow('Minutes', '--'),
+                    ]),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              user?.displayName ?? 'User',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              user?.email ?? 'No email',
-              style: const TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Provider: ${user?.provider ?? 'N/A'}',
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'User ID: ${user?.uid ?? 'N/A'}',
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
-            ),
-            const SizedBox(height: 32),
-            _buildStatCard('Sessions', '47'),
-            const SizedBox(height: 16),
-            _buildStatCard('Favorite Tools', '2'),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () async {
-                  await authViewModel.signOut();
-                  if (context.mounted) {
-                    Navigator.of(context).pushReplacementNamed('/');
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFEF4444),
-                  foregroundColor: Colors.white,
+
+            // Sign Out Button - Pinned to Bottom
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    await authViewModel.signOut();
+                    if (context.mounted) {
+                      Navigator.of(context).pushReplacementNamed('/');
+                    }
+                  },
+                  icon: const Icon(Icons.logout, size: 20),
+                  label: const Text('Sign Out'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.withOpacity(0.15),
+                    foregroundColor: const Color(0xFFFCA5A5),
+                    side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
-                child: const Text('Sign Out'),
               ),
             ),
           ],
@@ -86,22 +202,64 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String label, String value) {
+  Widget _buildSection(String title, List<Widget> children) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF16213E),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[400],
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(
+            '$label: ',
+            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+          ),
+          Text(
+            value,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white)),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
           Text(
             value,
             style: const TextStyle(
-              color: Color(0xFF4F46E5),
-              fontSize: 20,
+              color: Color(0xFF00D4AA),
+              fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),

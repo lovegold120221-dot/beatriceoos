@@ -1,3 +1,4 @@
+import '../../data/models/function_call_model.dart';
 import '../../data/models/template_model.dart';
 import '../../data/repositories/settings_repository.dart';
 
@@ -14,7 +15,7 @@ class SettingsUseCase {
     required String nuance,
     required String userName,
     required String agentName,
-    required List<dynamic> tools,
+    required List<FunctionCall> tools,
   }) async {
     return _repository.saveSettings(
       systemPrompt: systemPrompt,
@@ -24,7 +25,7 @@ class SettingsUseCase {
       nuance: nuance,
       userName: userName,
       agentName: agentName,
-      tools: tools.map((t) => t).toList(),
+      tools: tools,
     );
   }
 

@@ -2,11 +2,10 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../ui/viewmodels/auth_viewmodel.dart';
-import 'features/auth/auth_wrapper.dart';
-import 'features/chat/chat_screen.dart';
-import 'features/settings/settings_screen.dart';
-import 'features/profile/profile_screen.dart';
-import 'features/profile/speaker_profile.dart';
+import '../ui/features/auth/auth_wrapper.dart';
+import '../ui/features/chat/chat_screen.dart';
+import '../ui/features/settings/settings_screen.dart';
+import '../ui/features/profile/profile_screen.dart';
 
 class AppRouter {
   AppRouter._();

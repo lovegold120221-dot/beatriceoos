@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../data/services/device_control_service.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
 class SpeakerProfile extends StatelessWidget {

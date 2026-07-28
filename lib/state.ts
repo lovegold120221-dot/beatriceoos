@@ -80,6 +80,10 @@ export const useDeviceControl = create<{
   shizukuEnabled: boolean;
   accessibilityServiceEnabled: boolean;
   workspacePath: string;
+  deviceCategory: string;
+  activeExecutionPath: string;
+  opencodeUrl: string;
+  opencodeConnected: boolean;
   setPocketStrikeUrl: (url: string) => void;
   setPocketStrikeConnected: (connected: boolean) => void;
   setAdbEnabled: (enabled: boolean) => void;
@@ -90,6 +94,10 @@ export const useDeviceControl = create<{
   setShizukuEnabled: (enabled: boolean) => void;
   setAccessibilityServiceEnabled: (enabled: boolean) => void;
   setWorkspacePath: (path: string) => void;
+  setDeviceCategory: (category: string) => void;
+  setActiveExecutionPath: (path: string) => void;
+  setOpencodeUrl: (url: string) => void;
+  setOpencodeConnected: (connected: boolean) => void;
 }>(set => ({
   pocketStrikeUrl: 'http://localhost:5000',
   pocketStrikeConnected: false,
@@ -101,6 +109,10 @@ export const useDeviceControl = create<{
   shizukuEnabled: false,
   accessibilityServiceEnabled: false,
   workspacePath: '/storage/shared/PocketStrike-AI',
+  deviceCategory: 'unknown',
+  activeExecutionPath: 'pocketstrike',
+  opencodeUrl: 'http://localhost:5001',
+  opencodeConnected: false,
   setPocketStrikeUrl: url => set({ pocketStrikeUrl: url }),
   setPocketStrikeConnected: connected => set({ pocketStrikeConnected: connected }),
   setAdbEnabled: enabled => set({ adbEnabled: enabled }),
@@ -111,6 +123,10 @@ export const useDeviceControl = create<{
   setShizukuEnabled: enabled => set({ shizukuEnabled: enabled }),
   setAccessibilityServiceEnabled: enabled => set({ accessibilityServiceEnabled: enabled }),
   setWorkspacePath: path => set({ workspacePath: path }),
+  setDeviceCategory: category => set({ deviceCategory: category }),
+  setActiveExecutionPath: path => set({ activeExecutionPath: path }),
+  setOpencodeUrl: url => set({ opencodeUrl: url }),
+  setOpencodeConnected: connected => set({ opencodeConnected: connected }),
 }));
 
 /**

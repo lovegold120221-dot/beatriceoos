@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../data/models/conversation_turn.dart';
 import '../../viewmodels/chat_viewmodel.dart';
-import '../../viewmodels/settings_viewmodel.dart';
-import '../../viewmodels/auth_viewmodel.dart';
-import '../settings/settings_screen.dart';
-import '../profile/profile_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -16,7 +13,6 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   final _textController = TextEditingController();
-  bool _isChatOpen = false;
 
   @override
   void initState() {
@@ -29,8 +25,6 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chatViewModel = context.watch<ChatViewModel>();
-    final settingsViewModel = context.watch<SettingsViewModel>();
-    final authViewModel = context.watch<AuthViewModel>();
     final turns = chatViewModel.turns;
 
     return Scaffold(

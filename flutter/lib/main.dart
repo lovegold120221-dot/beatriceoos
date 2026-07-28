@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'app.dart';
@@ -9,6 +10,7 @@ import 'data/repositories/settings_repository.dart';
 import 'data/services/audio_service.dart';
 import 'data/services/firebase_service.dart';
 import 'data/services/gemini_service.dart';
+import 'data/services/device_control_service.dart';
 import 'domain/use_cases/auth_use_case.dart';
 import 'domain/use_cases/settings_use_case.dart';
 import 'ui/viewmodels/auth_viewmodel.dart';
@@ -39,19 +41,22 @@ class BeatriceApp extends StatelessWidget {
           create: (_) => AuthRepository(),
         ),
         ProxyProvider<AuthRepository, AuthUseCase>(
-          create: (context) => AuthUseCase(context.read<AuthRepository>()),
+          update: (context, authRepo, _) => AuthUseCase(authRepo),
         ),
         ProxyProvider<AuthUseCase, AuthViewModel>(
-          create: (context) => AuthViewModel(context.read<AuthUseCase>()),
+          update: (context, authUseCase, _) => AuthViewModel(authUseCase),
         ),
         Provider<SettingsRepository>(
           create: (_) => SettingsRepository(),
         ),
         ProxyProvider<SettingsRepository, SettingsUseCase>(
-          create: (context) => SettingsUseCase(context.read<SettingsRepository>()),
+          update: (context, settingsRepo, _) => SettingsUseCase(settingsRepo),
         ),
         ProxyProvider<SettingsUseCase, SettingsViewModel>(
-          create: (context) => SettingsViewModel(context.read<SettingsUseCase>()),
+          update: (context, settingsUseCase, _) => SettingsViewModel(settingsUseCase),
+        ),
+        Provider<DeviceControlService>(
+          create: (_) => DeviceControlService(),
         ),
         Provider<GeminiService>(
           create: (_) => GeminiService(),
@@ -60,11 +65,7 @@ class BeatriceApp extends StatelessWidget {
           create: (_) => AudioService(),
         ),
         ProxyProvider3<AuthViewModel, SettingsViewModel, GeminiService, ChatViewModel>(
-          create: (context) => ChatViewModel(
-            context.read<AuthViewModel>(),
-            context.read<SettingsViewModel>(),
-            context.read<GeminiService>(),
-          ),
+          update: (context, auth, settings, gemini, _) => ChatViewModel(auth, settings, gemini),
         ),
       ],
       child: MaterialApp(
@@ -79,7 +80,7 @@ class BeatriceApp extends StatelessWidget {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: const [Locale('en', 'US')],
-        routerConfig: AppRouter.router,
+        onGenerateRoute: AppRouter.onGenerateRoute,
       ),
     );
   }

@@ -25,6 +25,7 @@ import { AudioStreamer } from '../../lib/audio-streamer';
 import { audioContext } from '../../lib/utils';
 import VolMeterWorket from '../../lib/worklets/vol-meter';
 import { useLogStore, useSettings } from '@/lib/state';
+import { routeInstruction } from '../../lib/task-router/router';
 import { executeWithProgress } from '../../lib/tools/device-control';
 
 export type UseLiveApiResults = {
@@ -162,24 +163,41 @@ export function useLiveApi({
         });
 
         if (fc.name === 'mobile_use') {
-          const { success, result, error } = await executeWithProgress(
-            'mobile_use',
-            fc.args as Record<string, unknown>,
-            `Executing mobile use agent for instruction: ${fc.args.instruction}`
-          );
+          const instruction = fc.args.instruction as string;
+
+          // Route through the dynamic task router
+          const { success, data, error, path } = await routeInstruction(instruction);
 
           if (success) {
             functionResponses.push({
               id: fc.id,
               name: fc.name,
-              response: { result: result },
+              response: {
+                result: data,
+                execution_path: path,
+              },
             });
           } else {
-            functionResponses.push({
-              id: fc.id,
-              name: fc.name,
-              response: { error: error || 'Unknown error during mobile execution' },
-            });
+            // Fallback to original PocketStrike if routing fails
+            const { success: fallbackSuccess, result: fbResult, error: fbError } = await executeWithProgress(
+              'mobile_use',
+              fc.args as Record<string, unknown>,
+              `Fallback: Executing mobile use agent for instruction: ${fc.args.instruction}`
+            );
+
+            if (fallbackSuccess) {
+              functionResponses.push({
+                id: fc.id,
+                name: fc.name,
+                response: { result: fbResult, execution_path: 'pocketstrike_fallback' },
+              });
+            } else {
+              functionResponses.push({
+                id: fc.id,
+                name: fc.name,
+                response: { error: fbError || error || 'Unknown error during mobile execution' },
+              });
+            }
           }
         } else {
           // Default behavior for other tools

@@ -1,39 +1,32 @@
-import 'package:google_genai/google_genai.dart';
-import '../models/function_call_model.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
-  late final GenAI _client;
-  Session? _session;
-  String _model = 'models/gemini-2.5-flash-native-audio-preview';
+  late final GenerativeModel _model;
+  ChatSession? _chat;
+  String _modelName = 'models/gemini-2.5-flash-native-audio-preview';
   bool _connected = false;
 
   bool get isConnected => _connected;
-  String get model => _model;
+  String get model => _modelName;
 
   Future<bool> connect(String apiKey, Map<String, dynamic> config) async {
     try {
-      _client = GenAI(apiKey: apiKey);
-
-      final sessionConfig = LiveConnectConfig(
-        model: _model,
+      _model = GenerativeModel(
+        model: _modelName,
+        apiKey: apiKey,
+        systemInstruction: Content.text(config['systemInstruction'] ?? ''),
         generationConfig: GenerationConfig(
-          responseModalities: [Modality.audio, Modality.text],
-          speechConfig: SpeechConfig(
-            voiceName: config['voiceName'] ?? 'Aoede',
-          ),
+          responseMimeType: 'text/plain',
         ),
-        inputAudioTranscription: const InputAudioTranscriptionConfig(),
-        outputAudioTranscription: const OutputAudioTranscriptionConfig(),
-        systemInstruction: SystemInstruction(
-          parts: [Part.text(config['systemInstruction'] ?? '')],
-        ),
-        tools: _buildTools(config['tools'] ?? []),
+        safetySettings: [
+          SafetySetting(HarmCategory.harassment, HarmBlockThreshold.medium),
+          SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.medium),
+          SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.medium),
+          SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.medium),
+        ],
       );
 
-      _session = await _client.live.connect(
-        model: _model,
-        config: sessionConfig,
-      );
+      _chat = _model.startChat();
       _connected = true;
       return true;
     } catch (e) {
@@ -42,38 +35,39 @@ class GeminiService {
     }
   }
 
-  List<Tool> _buildTools(List<FunctionCall> functionCalls) {
-    return functionCalls
-        .where((tc) => tc.isEnabled)
-        .map((tc) => Tool.functionDeclarations([
-              FunctionDeclaration(
-                name: tc.name,
-                description: tc.description ?? '',
-                parameters: tc.parameters ?? {},
-              ),
-            ]))
-        .toList();
+  Future<String?> sendMessage(String text) async {
+    if (!_connected || _chat == null) return null;
+
+    try {
+      final response = await _chat!.sendMessage(Content.text(text));
+      return response.text;
+    } catch (e) {
+      return null;
+    }
   }
 
-  Future<void> sendMessage(String text) async {
-    if (!_connected || _session == null) return;
-    await _session!.sendClientContent([
-      Part.text(text),
-    ]);
+  Stream<String?> sendMessageStreaming(String text) async* {
+    if (!_connected || _chat == null) return;
+
+    try {
+      final response = _chat!.sendMessageStream(Content.text(text));
+      await for (final chunk in response) {
+        yield chunk.text;
+      }
+    } catch (e) {
+      // Stream ends on error
+    }
   }
 
   Future<void> sendAudio(List<int> audioData) async {
-    if (!_connected || _session == null) return;
-    await _session!.sendRealtimeInput([
-      RealtimeInput(
-        media: AudioMedia(data: audioData, mimeType: 'audio/pcm'),
-      ),
-    ]);
+    // Audio streaming via text is not supported in standard google_generative_ai package.
+    // This is a placeholder for future Live API WebSocket integration.
+    // For now, audio data can be transcribed client-side and sent as text.
+    return;
   }
 
   Future<void> disconnect() async {
-    await _session?.close();
-    _session = null;
+    _chat = null;
     _connected = false;
   }
 }
