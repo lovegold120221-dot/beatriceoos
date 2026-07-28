@@ -30,11 +30,13 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
+        const existingProfile = useAuthStore.getState().user;
         const profile: UserProfile = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || null,
           provider: firebaseUser.providerData[0]?.providerId ?? null,
+          photoURL: existingProfile?.photoURL || firebaseUser.photoURL || null,
         };
         setUser(profile);
       } else {

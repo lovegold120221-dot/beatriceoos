@@ -37,7 +37,11 @@ export default function Header() {
         onClick={toggleProfile}
         title="My Profile"
       >
-        {getInitials(currentUser?.displayName || currentUser?.email || null)}
+        {currentUser?.photoURL ? (
+          <img src={currentUser.photoURL} alt="Profile" className="avatar-img" />
+        ) : (
+          getInitials(currentUser?.displayName || currentUser?.email || null)
+        )}
       </div>
     </header>
   );
