@@ -10,12 +10,12 @@ import '../../widgets/beatrice_status_bar.dart';
 import '../../widgets/beatrice_header.dart';
 import '../../widgets/beatrice_bottom_nav.dart';
 import '../../widgets/chat_drawer.dart';
+import '../../widgets/error_screen.dart';
+import '../../widgets/task_status_overlay.dart';
+import '../../widgets/video_drawer.dart';
+import '../../widgets/welcome_screen.dart';
+import '../../../data/models/template_model.dart';
 
-/// Beatrice home screen — the orb-centric layout matching the web app.
-///
-/// Structure: StatusBar → Header → Orb (centred) → BottomNav (mic + chat).
-/// Chat is a slide-up bottom-sheet drawer. The orb reacts to connection
-/// state and audio volume.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
 
@@ -28,7 +28,9 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   ChatViewModel? _chatViewModel;
   bool _isChatOpen = false;
+  bool _isVideoDrawerOpen = false;
   int _lastTurnCount = 0;
+  Template _currentTemplate = Template.personalAssistant;
 
   @override
   void initState() {
@@ -79,6 +81,18 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  void _handleHoldToTalkStart() {
+    _chatViewModel?.startAudioCapture();
+  }
+
+  void _handleHoldToTalkEnd() {
+    _chatViewModel?.stopAudioCapture();
+  }
+
+  void _handleTemplateChanged(Template template) {
+    setState(() => _currentTemplate = template);
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatViewModel = context.watch<ChatViewModel>();
@@ -94,7 +108,7 @@ class _ChatScreenState extends State<ChatScreen> {
         top: false,
         child: Stack(
           children: [
-            // ── Main column: StatusBar → Header → Orb ──
+            // ── Main column ──
             Column(
               children: [
                 BeatriceStatusBar(
@@ -108,7 +122,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   onAvatarTap: () =>
                       Navigator.of(context).pushNamed('/profile'),
                 ),
-                // Offline banner
                 if (!connectivity.isOnline)
                   Container(
                     width: double.infinity,
@@ -130,51 +143,31 @@ class _ChatScreenState extends State<ChatScreen> {
                       ],
                     ),
                   ),
-                // Error banner
-                if (chatViewModel.errorMessage != null &&
-                    !chatViewModel.isConnected)
-                  Container(
-                    width: double.infinity,
-                    color: Colors.red.withValues(alpha: 0.15),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 6),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline,
-                            size: 16, color: AppTheme.red),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            chatViewModel.errorMessage!,
-                            style: const TextStyle(
-                                fontSize: 12, color: AppTheme.red),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => chatViewModel.connect(),
-                          child: const Text('Reconnect',
-                              style: TextStyle(fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                  ),
-                // Orb centred
                 Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 100),
-                      child: BeatriceOrb(
-                        connected: chatViewModel.isConnected,
-                        volume: chatViewModel.volume,
-                        inVolume: chatViewModel.inVolume,
-                        isSpeechDetected: chatViewModel.isSpeechDetected,
-                      ),
-                    ),
-                  ),
+                  child: _buildBody(chatViewModel),
                 ),
               ],
             ),
-            // ── Bottom nav (mic + chat toggle) ──
+            // Error banner
+            if (chatViewModel.errorMessage != null &&
+                !chatViewModel.isConnected)
+              Positioned(
+                top: 100,
+                left: 16,
+                right: 16,
+                child: ErrorScreen(
+                  errorMessage: chatViewModel.errorMessage,
+                  errorCode: 'CONNECT_ERR',
+                  onDismiss: () => chatViewModel.clearTurns(),
+                  onRetry: () => chatViewModel.connect(),
+                ),
+              ),
+            // Task status overlay
+            TaskStatusOverlay(
+              isRunning: chatViewModel.isTaskRunning,
+              message: chatViewModel.isTaskRunning ? 'Running device task...' : '',
+            ),
+            // Bottom nav
             BeatriceBottomNav(
               connected: chatViewModel.isConnected,
               isChatOpen: _isChatOpen,
@@ -182,8 +175,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 setState(() => _isChatOpen = !_isChatOpen);
               },
               onMicTap: _handleMicTap,
+              onHoldToTalkStart: _handleHoldToTalkStart,
+              onHoldToTalkEnd: _handleHoldToTalkEnd,
             ),
-            // ── Chat drawer (slide-up bottom sheet) ──
+            // Chat drawer
             ChatDrawer(
               isOpen: _isChatOpen,
               onClose: () => setState(() => _isChatOpen = false),
@@ -192,7 +187,62 @@ class _ChatScreenState extends State<ChatScreen> {
               textController: _textController,
               onSend: _handleSend,
             ),
+            // Video drawer
+            VideoDrawer(
+              isOpen: _isVideoDrawerOpen,
+              onClose: () => setState(() => _isVideoDrawerOpen = false),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody(ChatViewModel vm) {
+    if (vm.isConnecting) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                color: AppTheme.primary,
+              ),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Connecting...',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (vm.isConnected || vm.turns.isNotEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 100),
+          child: BeatriceOrb(
+            connected: vm.isConnected,
+            volume: vm.volume,
+            inVolume: vm.inVolume,
+            isSpeechDetected: vm.isSpeechDetected,
+          ),
+        ),
+      );
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 100),
+        child: WelcomeScreen(
+          currentTemplate: _currentTemplate,
+          onTemplateChanged: _handleTemplateChanged,
+          onPromptTap: _handleSend,
         ),
       ),
     );

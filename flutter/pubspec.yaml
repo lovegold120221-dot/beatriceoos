@@ -30,6 +30,11 @@ dependencies:
   path_provider: ^2.1.2
   flutter_native_splash: ^2.3.10
   meta: ^1.15.0
+  web_socket_channel: ^3.0.1
+  record: ^6.0.0
+  audioplayers: ^6.1.0
+  google_identity_services_web: ^0.2.0
+  firebase_database: ^11.3.10
 
 dev_dependencies:
   flutter_test:

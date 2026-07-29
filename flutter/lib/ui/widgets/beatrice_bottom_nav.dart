@@ -9,6 +9,8 @@ class BeatriceBottomNav extends StatefulWidget {
   final bool isChatOpen;
   final VoidCallback onToggleChat;
   final VoidCallback onMicTap;
+  final VoidCallback? onHoldToTalkStart;
+  final VoidCallback? onHoldToTalkEnd;
 
   const BeatriceBottomNav({
     super.key,
@@ -16,6 +18,8 @@ class BeatriceBottomNav extends StatefulWidget {
     this.isChatOpen = false,
     required this.onToggleChat,
     required this.onMicTap,
+    this.onHoldToTalkStart,
+    this.onHoldToTalkEnd,
   });
 
   @override
@@ -80,8 +84,10 @@ class _BeatriceBottomNavState extends State<BeatriceBottomNav>
                 isListening: isListening,
                 dotController: _dotController,
                 onMicTap: widget.onMicTap,
+                onHoldToTalkStart: widget.onHoldToTalkStart,
+                onHoldToTalkEnd: widget.onHoldToTalkEnd,
               ),
-              // Video toggle (placeholder — uses a camera icon)
+              // Video toggle
               _NavItem(
                 icon: Icons.videocam_outlined,
                 label: 'Video',
@@ -141,12 +147,16 @@ class _CenterControls extends StatelessWidget {
   final bool isListening;
   final AnimationController dotController;
   final VoidCallback onMicTap;
+  final VoidCallback? onHoldToTalkStart;
+  final VoidCallback? onHoldToTalkEnd;
 
   const _CenterControls({
     required this.connected,
     required this.isListening,
     required this.dotController,
     required this.onMicTap,
+    this.onHoldToTalkStart,
+    this.onHoldToTalkEnd,
   });
 
   @override
@@ -158,9 +168,15 @@ class _CenterControls extends StatelessWidget {
         // Left dots
         _DotsGroup(isListening: isListening, dotController: dotController),
         const SizedBox(width: 16),
-        // Mic button
+        // Mic button with hold-to-talk
         GestureDetector(
           onTap: onMicTap,
+          onLongPressStart: onHoldToTalkStart != null
+              ? (_) => onHoldToTalkStart!()
+              : null,
+          onLongPressEnd: onHoldToTalkEnd != null
+              ? (_) => onHoldToTalkEnd!()
+              : null,
           child: Container(
             width: 74,
             height: 74,
