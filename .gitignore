@@ -28,3 +28,5 @@ dist-ssr
 
 # Flutter build artifacts (release/debug APKs, intermediates)
 /flutter/build/
+.gradle/
+unzipped/
