@@ -19,6 +19,7 @@
 import { executeTask } from './executor';
 import { usePrivateAgent } from './store';
 import { verifyFinalOutcome } from './verifier';
+import type { LlmConfig } from './llm-client';
 import type {
   CompletionStatus,
   ProgressEvent,
@@ -30,6 +31,7 @@ import type {
 
 export interface RunOptions {
   apiKey: string;
+  baseUrl: string;
   model?: string;
 }
 
@@ -67,7 +69,8 @@ export async function runStructuredTask(
   options: RunOptions,
 ): Promise<StructuredResult> {
   const store = usePrivateAgent.getState();
-  const { apiKey, model } = options;
+  const { apiKey, baseUrl, model } = options;
+  const llm: LlmConfig = { apiKey, baseUrl, model: model ?? 'eburon-code-fast:latest' };
 
   // 1. Validate the task before execution.
   const validationError = validateTask(task);
@@ -95,6 +98,7 @@ export async function runStructuredTask(
   // 4. Run the executor loop.
   const executorResult = await executeTask(task, {
     apiKey,
+    baseUrl,
     model,
     onProgress: (message, stepNumber) => {
       const state: TaskState = stepNumber === 0 ? 'executing' : 'executing';
@@ -131,8 +135,7 @@ export async function runStructuredTask(
     const finalCheck = await verifyFinalOutcome(
       executorResult.finalScreen,
       task.goal,
-      apiKey,
-      model,
+      llm,
     );
     finalVerificationStatus = finalCheck.status;
     if (finalCheck.observations.length > 0) {

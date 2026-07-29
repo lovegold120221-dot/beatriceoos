@@ -31,7 +31,7 @@ class ChatViewModel extends ChangeNotifier {
   bool _isSending = false;
   bool _isListening = false;
   double _volume = 0.0;
-  double _inVolume = 0.0;
+  final double _inVolume = 0.0;
   bool _isSpeechDetected = false;
   int _vadProbability = 0;
   String? _errorMessage;

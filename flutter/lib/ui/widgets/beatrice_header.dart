@@ -31,8 +31,8 @@ class BeatriceHeader extends StatelessWidget {
             onTap: onSettingsTap,
           ),
           // Centered title
-          Column(
-            children: const [
+          const Column(
+            children: [
               Text(
                 'Beatrice',
                 style: TextStyle(
@@ -60,8 +60,8 @@ class BeatriceHeader extends StatelessWidget {
             child: Container(
               width: 40,
               height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFF1a1a1a),
+              decoration: const BoxDecoration(
+                color: Color(0xFF1a1a1a),
                 shape: BoxShape.circle,
               ),
               clipBehavior: Clip.antiAlias,

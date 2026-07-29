@@ -13,7 +13,7 @@ class AlarmService {
         arguments: <String, dynamic>{
           'android.intent.extra.alarm.HOUR': hour,
           'android.intent.extra.alarm.MINUTES': minute,
-          if (label != null) 'android.intent.extra.alarm.MESSAGE': label,
+          'android.intent.extra.alarm.MESSAGE': ?label,
           'android.intent.extra.alarm.SKIP_UI': true,
         },
       );
@@ -36,7 +36,7 @@ class AlarmService {
         action: 'android.intent.action.SET_TIMER',
         arguments: <String, dynamic>{
           'android.intent.extra.alarm.LENGTH': seconds,
-          if (label != null) 'android.intent.extra.alarm.MESSAGE': label,
+          'android.intent.extra.alarm.MESSAGE': ?label,
           'android.intent.extra.alarm.SKIP_UI': true,
         },
       );

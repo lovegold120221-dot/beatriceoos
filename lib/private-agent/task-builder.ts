@@ -33,32 +33,31 @@ const OBSERVATION_ACTIONS: AllowedAction[] = [
 
 /**
  * Actions that mutate UI state but are reversible (navigation, typing).
+ * NOTE: type_text, paste_text, and set_clipboard are intentionally excluded
+ * from this list. They are DESTRUCTIVE_ACTIONS — available ONLY in
+ * high-risk mode to prevent the "type_text + tap Send = send a message"
+ * bypass. The executor's validateAction enforces this at step time.
  */
 const INTERACTIVE_ACTIONS: AllowedAction[] = [
   ...OBSERVATION_ACTIONS,
   'tap',
   'swipe',
   'long_press',
-  'type_text',
-  'paste_text',
   'copy_text',
   'open_url',
   'set_brightness',
   'set_volume',
   'get_clipboard',
-  'set_clipboard',
   'notify',
 ];
 
 /**
- * Actions that are ALWAYS blocked unless the task is explicitly high-risk
- * AND the user has confirmed. Even then, certain irreversible actions
- * remain permanently blocked.
+ * Actions that mutate state in ways that could be destructive when combined
+ * with other actions (e.g., type_text + tap Send = sending a message).
+ * These are blocked in read-only and interactive modes, and only available
+ * in high-risk mode after the user has confirmed.
  */
 const DESTRUCTIVE_ACTIONS: AllowedAction[] = [
-  // Note: there is no dedicated "send_message" primitive in the bridge,
-  // but type_text + tap on a Send button can produce the same effect.
-  // We keep this list as a semantic denylist for the planner.
   'type_text',
   'paste_text',
   'set_clipboard',
@@ -166,18 +165,21 @@ export function buildStructuredTask(
       break;
 
     case 'interact':
-      // Interactive: navigation + typing allowed, but destructive combos
-      // (typing into a compose field + tapping send) are still blocked
-      // unless the user confirms. We block type_text here and let the
-      // planner request confirmation if it needs to type.
+      // Interactive: navigation allowed, but destructive text/clipboard
+      // combos are blocked. The planner can see them in the schema but
+      // validateAction in the executor will reject them at step time.
       allowedActions = INTERACTIVE_ACTIONS;
       blockedActions = [...DESTRUCTIVE_ACTIONS, ...PERMANENTLY_BLOCKED];
       break;
 
     case 'high_risk':
-      // High-risk: full action set available because the user has
-      // confirmed. Only permanently-blocked actions remain blocked.
-      allowedActions = INTERACTIVE_ACTIONS;
+      // High-risk: full action set (including destructive ones) because
+      // the user has confirmed. Only permanently-blocked actions remain
+      // blocked.
+      allowedActions = [
+        ...INTERACTIVE_ACTIONS,
+        ...DESTRUCTIVE_ACTIONS,
+      ];
       blockedActions = [...PERMANENTLY_BLOCKED];
       break;
   }

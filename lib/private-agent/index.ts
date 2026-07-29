@@ -41,11 +41,14 @@ export type {
   VerificationStatus,
 } from './types';
 
+export type { LlmConfig } from './llm-client';
+
 import { classifyRequest } from './classifier';
 import { buildStructuredTask } from './task-builder';
 import { runStructuredTask } from './orchestrator';
 import { formatResultAsSpeech } from './response-formatter';
 import { usePrivateAgent } from './store';
+import type { LlmConfig } from './llm-client';
 import type {
   ClassificationResult,
   StructuredResult,
@@ -64,10 +67,9 @@ export interface ClassifyAndBuildResult {
  */
 export async function classifyAndBuildTask(
   request: string,
-  apiKey: string,
-  model?: string,
+  llm: LlmConfig,
 ): Promise<ClassifyAndBuildResult> {
-  const classification = await classifyRequest(request, apiKey, model);
+  const classification = await classifyRequest(request, llm);
   const task = buildStructuredTask(classification);
   return { classification, task };
 }
@@ -90,11 +92,10 @@ export interface ExecuteDeviceTaskResult {
  */
 export async function executeDeviceTask(
   request: string,
-  apiKey: string,
-  model?: string,
+  llm: LlmConfig,
 ): Promise<ExecuteDeviceTaskResult> {
-  const { task } = await classifyAndBuildTask(request, apiKey, model);
-  const result = await runStructuredTask(task, { apiKey, model });
+  const { task } = await classifyAndBuildTask(request, llm);
+  const result = await runStructuredTask(task, { apiKey: llm.apiKey, baseUrl: llm.baseUrl, model: llm.model });
   const speech = formatResultAsSpeech(result);
   return { result, speech };
 }

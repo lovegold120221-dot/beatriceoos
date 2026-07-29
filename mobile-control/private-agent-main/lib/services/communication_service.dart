@@ -78,8 +78,8 @@ class CommunicationService {
         scheme: 'mailto',
         path: to,
         queryParameters: {
-          if (subject != null) 'subject': subject,
-          if (body != null) 'body': body,
+          'subject': ?subject,
+          'body': ?body,
         },
       );
       if (await canLaunchUrl(uri)) {

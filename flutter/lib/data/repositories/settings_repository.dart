@@ -161,6 +161,8 @@ class AiEngineSettings {
 }
 
 /// User-configurable device-control bridge state.
+///
+/// Mirrors the web app's zustand useDeviceControl store fields.
 class DeviceControlSettings {
   final String mobileUseUrl;
   final String workspacePath;
@@ -171,6 +173,11 @@ class DeviceControlSettings {
   final String adbTcpIpPort;
   final bool shizukuEnabled;
   final bool accessibilityServiceEnabled;
+  // PC Remote Control fields (used on desktop platforms like macOS, Windows, Linux)
+  final bool pcEnabled;
+  final String pcSshHost;
+  final String pcSshUser;
+  final String pcSshPort;
 
   const DeviceControlSettings({
     this.mobileUseUrl = 'http://127.0.0.1:4096',
@@ -182,6 +189,10 @@ class DeviceControlSettings {
     this.adbTcpIpPort = '5555',
     this.shizukuEnabled = false,
     this.accessibilityServiceEnabled = false,
+    this.pcEnabled = true,
+    this.pcSshHost = '127.0.0.1',
+    this.pcSshUser = '',
+    this.pcSshPort = '22',
   });
 
   factory DeviceControlSettings.fromJson(Map<String, dynamic> json) =>
@@ -198,6 +209,10 @@ class DeviceControlSettings {
         shizukuEnabled: (json['shizukuEnabled'] as bool?) ?? false,
         accessibilityServiceEnabled:
             (json['accessibilityServiceEnabled'] as bool?) ?? false,
+        pcEnabled: (json['pcEnabled'] as bool?) ?? true,
+        pcSshHost: (json['pcSshHost'] as String?) ?? '127.0.0.1',
+        pcSshUser: (json['pcSshUser'] as String?) ?? '',
+        pcSshPort: (json['pcSshPort'] as String?) ?? '22',
       );
 
   Map<String, dynamic> toJson() => {
@@ -210,6 +225,10 @@ class DeviceControlSettings {
         'adbTcpIpPort': adbTcpIpPort,
         'shizukuEnabled': shizukuEnabled,
         'accessibilityServiceEnabled': accessibilityServiceEnabled,
+        'pcEnabled': pcEnabled,
+        'pcSshHost': pcSshHost,
+        'pcSshUser': pcSshUser,
+        'pcSshPort': pcSshPort,
       };
 
   DeviceControlSettings copyWith({
@@ -222,6 +241,10 @@ class DeviceControlSettings {
     String? adbTcpIpPort,
     bool? shizukuEnabled,
     bool? accessibilityServiceEnabled,
+    bool? pcEnabled,
+    String? pcSshHost,
+    String? pcSshUser,
+    String? pcSshPort,
   }) =>
       DeviceControlSettings(
         mobileUseUrl: mobileUseUrl ?? this.mobileUseUrl,
@@ -234,5 +257,9 @@ class DeviceControlSettings {
         shizukuEnabled: shizukuEnabled ?? this.shizukuEnabled,
         accessibilityServiceEnabled:
             accessibilityServiceEnabled ?? this.accessibilityServiceEnabled,
+        pcEnabled: pcEnabled ?? this.pcEnabled,
+        pcSshHost: pcSshHost ?? this.pcSshHost,
+        pcSshUser: pcSshUser ?? this.pcSshUser,
+        pcSshPort: pcSshPort ?? this.pcSshPort,
       );
 }

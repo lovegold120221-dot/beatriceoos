@@ -6,11 +6,19 @@
  * first gate in the Beatrice -> PrivateAgent flow and drives whether the
  * user must confirm before execution.
  *
+ * NOTE: App name detection is platform-aware. On macOS/Windows/Linux
+ * (desktop), `targetApp` will be the human-readable app name (e.g.
+ * "YouTube", "Gmail") because the desktop bridge uses `open -a` / Start-Process
+ * / xdg-open. On Android, it will be the Android package name (e.g.
+ * "com.google.android.youtube") because the mobile bridge uses `am start`.
+ *
  * @license SPDX-License-Identifier: Apache-2.0
  */
 
-import { GoogleGenAI } from '@google/genai';
+import { callLLM } from './llm-client';
+import type { LlmConfig, LlmMessage } from './llm-client';
 import type { ActionClassification, ClassificationResult } from './types';
+import { detectPlatform } from '@/lib/platform';
 
 /**
  * Keywords that strongly indicate a destructive / irreversible / sensitive
@@ -102,8 +110,48 @@ function hasMutationVerb(lower: string): boolean {
 
 /**
  * Quick named-app detector used by both the heuristic and as a fallback.
+ *
+ * Two maps:
+ *   1. MOBILE_APP_HINTS  → Android package names (for Android/iOS)
+ *   2. DESKTOP_APP_HINTS  → Human-readable app names    (for macOS/Win/Linux)
+ *
+ * At runtime, `detectTargetApp()` calls `detectPlatform()` and chooses the
+ * right map so the bridge receives identifiers it understands.
  */
-const APP_HINTS: Record<string, string> = {
+
+/** App names for desktop platforms (macOS, Windows, Linux). */
+const DESKTOP_APP_HINTS: Record<string, string> = {
+  whatsapp: 'WhatsApp',
+  messenger: 'Messenger',
+  'facebook': 'Facebook',
+  instagram: 'Instagram',
+  gmail: 'Gmail',
+  email: 'Mail',
+  outlook: 'Outlook',
+  messages: 'Messages',
+  slack: 'Slack',
+  telegram: 'Telegram',
+  'x': 'X',
+  twitter: 'Twitter',
+  tiktok: 'TikTok',
+  youtube: 'YouTube',
+  spotify: 'Spotify',
+  maps: 'Maps',
+  calendar: 'Calendar',
+  drive: 'Google Drive',
+  photos: 'Photos',
+  camera: 'Camera',
+  settings: 'System Settings',
+  chrome: 'Chrome',
+  notion: 'Notion',
+  discord: 'Discord',
+  signal: 'Signal',
+  'file manager': 'Finder',
+  files: 'Files',
+};
+
+/** Android package names (for Android / Termux). */
+const MOBILE_APP_HINTS: Record<string, string> = {
   whatsapp: 'com.whatsapp',
   messenger: 'com.facebook.orca',
   'facebook': 'com.facebook.katana',
@@ -143,9 +191,23 @@ const APP_HINTS: Record<string, string> = {
   'lazada': 'com.lazada.android',
 };
 
+/** Cache the platform detection once per module load. */
+let _platformIsDesktop: boolean | null = null;
+function isDesktopPlatform(): boolean {
+  if (_platformIsDesktop === null) {
+    try {
+      _platformIsDesktop = detectPlatform().isDesktop;
+    } catch {
+      _platformIsDesktop = false; // SSR / unknown — default to mobile
+    }
+  }
+  return _platformIsDesktop;
+}
+
 function detectTargetApp(lower: string): string | null {
-  for (const [hint, pkg] of Object.entries(APP_HINTS)) {
-    if (lower.includes(hint)) return pkg;
+  const hints = isDesktopPlatform() ? DESKTOP_APP_HINTS : MOBILE_APP_HINTS;
+  for (const [hint, identifier] of Object.entries(hints)) {
+    if (lower.includes(hint)) return identifier;
   }
   return null;
 }
@@ -168,7 +230,7 @@ const CLASSIFICATION_SCHEMA = {
     },
     targetApp: {
       type: 'string',
-      description: 'Android package name of the target app, or null if none.',
+      description: 'Target app identifier — Android package name on mobile, app name on desktop, or null if none.',
       nullable: true,
     },
     goal: {
@@ -188,37 +250,35 @@ const CLASSIFICATION_SCHEMA = {
  * to a structured-output Gemini call for ambiguous cases.
  *
  * @param request      The user's natural-language request.
- * @param apiKey       Gemini API key (same one used by the Live session).
- * @param model        Optional model override; defaults to a fast text model.
+ * @param llm          LLM configuration (apiKey, baseUrl, model).
  */
 export async function classifyRequest(
   request: string,
-  apiKey: string,
-  model = 'gemini-2.5-flash',
+  llm: LlmConfig,
 ): Promise<ClassificationResult> {
   const heuristic = heuristicClassify(request);
   if (heuristic) return heuristic;
 
   try {
-    const genAI = new GoogleGenAI({ apiKey });
-    const response = await genAI.models.generateContent({
-      model,
-      contents: request,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: CLASSIFICATION_SCHEMA as any,
-        systemInstruction:
+    const messages: LlmMessage[] = [
+      {
+        role: 'system',
+        content:
           'You classify a user voice request to a mobile AI assistant named Beatrice. ' +
           'Decide whether the request requires operating the user\'s mobile device, and if so, ' +
           'classify the risk level. Be conservative: any action that sends, deletes, pays, ' +
           'mutates accounts, or is otherwise irreversible is "high-risk". ' +
           'Reading, checking, listing, summarising visible content is "read-only". ' +
           'Opening apps, navigating, typing into search, or other reversible UI navigation is "interactive". ' +
-          'If no device operation is needed, set requiresDeviceAction=false and classification="read-only".',
+          'If no device operation is needed, set requiresDeviceAction=false and classification="read-only".\n\n' +
+          'Respond ONLY with valid JSON matching this schema:\n' +
+          JSON.stringify(CLASSIFICATION_SCHEMA, null, 2),
       },
-    });
+      { role: 'user', content: request },
+    ];
 
-    const parsed = JSON.parse(response.text ?? '{}') as Partial<ClassificationResult> & {
+    const llmResponse = await callLLM(messages, llm);
+    const parsed = JSON.parse(llmResponse.text ?? '{}') as Partial<ClassificationResult> & {
       classification?: ActionClassification;
       requiresDeviceAction?: boolean;
       targetApp?: string | null;

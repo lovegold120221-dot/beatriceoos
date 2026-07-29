@@ -1,259 +1,33 @@
 /**
- * @license
- * SPDX-License-Identifier: Apache-2.0
+ * Device Control — Single Tool Declaration
+ *
+ * Beatrice has exactly ONE function tool for device control: `device_control`.
+ * She sends a natural-language request to this tool, and a router forwards it
+ * to the configured AI provider (Ollama, Opencode, etc.) which plans and
+ * executes the necessary device actions.
+ *
+ * @license SPDX-License-Identifier: Apache-2.0
  */
 import { FunctionResponseScheduling } from '@google/genai';
 import { FunctionCall } from '../state';
 
 export const deviceControlTools: FunctionCall[] = [
   {
-    name: 'device_tap',
-    description: 'Taps the screen at specified coordinates on the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        x: { type: 'INTEGER', description: 'X coordinate for the tap.' },
-        y: { type: 'INTEGER', description: 'Y coordinate for the tap.' },
-      },
-      required: ['x', 'y'],
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_swipe',
-    description: 'Performs a swipe gesture on the authorised mobile device from one coordinate to another.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        x1: { type: 'INTEGER', description: 'Starting X coordinate.' },
-        y1: { type: 'INTEGER', description: 'Starting Y coordinate.' },
-        x2: { type: 'INTEGER', description: 'Ending X coordinate.' },
-        y2: { type: 'INTEGER', description: 'Ending Y coordinate.' },
-        duration: { type: 'INTEGER', description: 'Duration of the swipe in milliseconds.' },
-      },
-      required: ['x1', 'y1', 'x2', 'y2'],
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_type_text',
-    description: 'Types text into the currently focused field on the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        text: { type: 'STRING', description: 'The text to type.' },
-      },
-      required: ['text'],
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_paste_text',
-    description: 'Pastes the current clipboard contents into the currently focused field on the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {},
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_copy_text',
-    description: 'Copies the text content of the currently selected or focused element on the authorised mobile device to the clipboard.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {},
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_scroll',
-    description: 'Scrolls the current screen on the authorised mobile device in the specified direction.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        direction: { type: 'STRING', enum: ['up', 'down', 'left', 'right'], description: 'Direction to scroll.' },
-        distance: { type: 'INTEGER', description: 'Distance to scroll in pixels.' },
-      },
-      required: ['direction'],
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_launch_app',
-    description: 'Launches an installed application on the authorised mobile device by its package name.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        packageName: { type: 'STRING', description: 'The package or app name to launch.' },
-      },
-      required: ['packageName'],
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_take_screenshot',
-    description: 'Captures a screenshot of the current screen on the authorised mobile device and saves it to the workspace.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        saveToWorkspace: { type: 'BOOLEAN', description: 'Whether to save the screenshot to the workspace directory.' },
-      },
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_get_ui_layout',
-    description: 'Dumps the current active screen UI layout showing all clickable elements and their coordinates on the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {},
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_get_installed_apps',
-    description: 'Lists all installed applications on the authorised mobile device with their package names.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        userOnly: { type: 'BOOLEAN', description: 'Whether to list only user-installed apps.' },
-      },
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_go_home',
-    description: 'Navigates to the home screen on the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {},
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_go_back',
-    description: 'Navigates back to the previous screen on the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {},
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_open_url',
-    description: 'Opens a URL in the default browser on the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        url: { type: 'STRING', description: 'The URL to open in the browser.' },
-      },
-      required: ['url'],
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_set_brightness',
-    description: 'Adjusts the screen brightness on the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        level: { type: 'INTEGER', description: 'Brightness level from 0 to 255.' },
-      },
-      required: ['level'],
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_set_volume',
-    description: 'Adjusts a volume stream on the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        stream: { type: 'STRING', enum: ['music', 'ring', 'alarm', 'notification', 'system'], description: 'The volume stream to adjust.' },
-        level: { type: 'INTEGER', description: 'Volume level.' },
-      },
-      required: ['stream', 'level'],
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_get_clipboard',
-    description: 'Retrieves the current contents of the clipboard on the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {},
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_set_clipboard',
-    description: 'Sets the clipboard contents on the authorised mobile device to the specified text.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        text: { type: 'STRING', description: 'The text to put on the clipboard.' },
-      },
-      required: ['text'],
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_notify',
-    description: 'Sends a system notification on the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {
-        title: { type: 'STRING', description: 'The notification title.' },
-        message: { type: 'STRING', description: 'The notification message body.' },
-      },
-      required: ['title', 'message'],
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'device_get_screen_size',
-    description: 'Returns the screen dimensions (width and height) of the authorised mobile device.',
-    parameters: {
-      type: 'OBJECT',
-      properties: {},
-    },
-    isEnabled: true,
-    scheduling: FunctionResponseScheduling.INTERRUPT,
-  },
-  {
-    name: 'execute_device_task',
+    name: 'device_control',
     description:
-      'Delegates a natural-language device request to PrivateAgent. PrivateAgent classifies the request (read-only / interactive / high-risk), builds a structured task, validates allowed and blocked actions, executes it step-by-step on the authorised mobile device, verifies the result on the screen, and returns a verified summary. Use this for any request that requires operating the user\'s phone — e.g. "check who messaged me on WhatsApp", "open my latest email", "read my notifications". For high-risk actions (sending, deleting, paying) PrivateAgent will require user confirmation before proceeding. Set confirmed=true only after the user has explicitly agreed to proceed with a high-risk task.',
+      'Sends a natural-language device request to the device controller. ' +
+      'Use this for ANY request the user makes about their device — opening apps, ' +
+      'checking messages, searching the web, running commands, checking system status, ' +
+      'or any other device operation. The controller handles planning and execution automatically.',
     parameters: {
       type: 'OBJECT',
       properties: {
         request: {
           type: 'STRING',
           description:
-            'The user\'s natural-language request, exactly as they expressed it. PrivateAgent will classify and structure it.',
-        },
-        confirmed: {
-          type: 'BOOLEAN',
-          description:
-            'Set to true only when the user has explicitly confirmed a high-risk task. Omit or set to false for the first call; PrivateAgent will return a confirmation prompt if needed.',
+            'The user\'s request, exactly as they said it. ' +
+            'Examples: "Open YouTube", "Check my messages", "What\'s the CPU usage?", ' +
+            '"Search for Eburon AI on the web", "Scan my local network".',
         },
       },
       required: ['request'],

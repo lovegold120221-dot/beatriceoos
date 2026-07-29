@@ -61,6 +61,7 @@ async function ensureAuth() {
 }
 
 export interface AppSettingsData {
+  // Core settings
   systemPrompt: string;
   model: string;
   voice: string;
@@ -70,6 +71,27 @@ export interface AppSettingsData {
   agentName?: string;
   tools: any[];
   updatedAt: string;
+
+  // Device control settings
+  mobileUseUrl?: string;
+  workspacePath?: string;
+  adbEnabled?: boolean;
+  adbRootEnabled?: boolean;
+  adbTcpIpEnabled?: boolean;
+  adbTcpIpAddress?: string;
+  adbTcpIpPort?: string;
+  shizukuEnabled?: boolean;
+  accessibilityServiceEnabled?: boolean;
+  pcEnabled?: boolean;
+  pcSshHost?: string;
+  pcSshUser?: string;
+  pcSshPort?: string;
+
+  // MobileUse AI Engine settings
+  aiAlias?: string;
+  aiBaseUrl?: string;
+  aiApiKey?: string;
+  aiModel?: string;
 }
 
 export async function saveSettingsToFirebase(settingsData: AppSettingsData): Promise<{ remoteSaved: boolean; message: string }> {
@@ -200,6 +222,27 @@ export async function saveConversationToFirebase(turns: SavedTurn[]): Promise<vo
    } catch (_err) {
      // Ignore Firestore unavailable errors
    }
+}
+
+
+export interface UsageStats {
+  sessions: number;
+  messages: number;
+  minutes: number;
+}
+
+/**
+ * Updates the persistent usage statistics in Firebase.
+ * This is called whenever a new turn is added to the conversation.
+ */
+export async function updateUsageStats(stats: UsageStats): Promise<void> {
+  await ensureAuth();
+  try {
+    const statsRef = ref(db, 'usage/stats');
+    await set(statsRef, stats);
+  } catch (err) {
+    console.warn('Usage stats update failed:', err);
+  }
 }
 
 export async function loadConversationFromFirebase(): Promise<SavedTurn[]> {

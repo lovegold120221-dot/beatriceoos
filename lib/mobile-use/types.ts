@@ -23,7 +23,17 @@ export type DeviceAction =
   | 'get_screen_size'
   | 'get_clipboard'
   | 'set_clipboard'
-  | 'notify';
+  | 'notify'
+  | 'get_system_stats'
+  | 'scan_wifi_networks'
+  | 'take_camera_photo'
+  | 'send_sms'
+  | 'make_phone_call'
+  | 'get_phone_location'
+  | 'speak_text'
+  | 'web_search'
+  | 'local_network_scan'
+  | 'pc_control';
 
 export interface TapRequest {
   x: number;
@@ -87,6 +97,41 @@ export interface NotifyRequest {
   message: string;
 }
 
+export interface SystemStatsRequest {}
+
+export interface WifiScanRequest {}
+
+export interface CameraPhotoRequest {
+  cameraId?: string; // "0" = back, "1" = front
+}
+
+export interface SendSmsRequest {
+  number: string;
+  message: string;
+}
+
+export interface MakeCallRequest {
+  number: string;
+}
+
+export interface LocationRequest {}
+
+export interface SpeakTextRequest {
+  text: string;
+}
+
+export interface WebSearchRequest {
+  query: string;
+}
+
+export interface NetworkScanRequest {}
+
+export interface PcControlRequest {
+  action: 'status' | 'open_app' | 'run_command' | 'shutdown' | 'restart';
+  appName?: string;
+  command?: string;
+}
+
 export type DeviceRequest =
   | TapRequest
   | SwipeRequest
@@ -102,4 +147,14 @@ export type DeviceRequest =
   | ScreenSizeRequest
   | GetClipboardRequest
   | SetClipboardRequest
-  | NotifyRequest;
+  | NotifyRequest
+  | SystemStatsRequest
+  | WifiScanRequest
+  | CameraPhotoRequest
+  | SendSmsRequest
+  | MakeCallRequest
+  | LocationRequest
+  | SpeakTextRequest
+  | WebSearchRequest
+  | NetworkScanRequest
+  | PcControlRequest;

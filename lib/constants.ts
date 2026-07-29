@@ -85,6 +85,66 @@ export const SUPERHERO_VOICES: VoiceOption[] = [
 
 export const AVAILABLE_VOICES = SUPERHERO_VOICES.map(v => v.name);
 
+// ─── MobileUse AI Engine Provider Presets ───────────────────────
+
+export interface AiProviderPreset {
+  alias: string;
+  label: string;
+  baseUrl: string;
+  model: string;
+  apiKey: string;
+}
+
+export const AI_PROVIDER_PRESETS: AiProviderPreset[] = [
+  {
+    alias: 'ollama',
+    label: 'Ollama Local',
+    baseUrl: 'http://127.0.0.1:11434/v1',
+    model: 'eburon-code-fast:latest',
+    apiKey: 'ollama',
+  },
+  {
+    alias: 'opencode',
+    label: 'Opencode',
+    baseUrl: 'http://127.0.0.1:4096/v1',
+    model: 'opencode/deepseek-v4-flash-free',
+    apiKey: 'dummy',
+  },
+  {
+    alias: 'ollama-cloud',
+    label: 'Ollama Cloud',
+    baseUrl: 'https://api.ollama.ai/v1',
+    model: 'glm-5.2:cloud',
+    apiKey: '',
+  },
+  {
+    alias: 'gemini',
+    label: 'Gemini API',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    model: 'gemini-3.1-flash-lite',
+    apiKey: '',
+  },
+  {
+    alias: 'freebuff',
+    label: 'Freebuff',
+    baseUrl: 'http://127.0.0.1:4096/v1',
+    model: 'opencode/deepseek-v4-flash-free',
+    apiKey: '',
+  },
+  {
+    alias: 'groq',
+    label: 'Groq',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    model: 'openai/gpt-oss-120b',
+    apiKey: '',
+  },
+];
+
+export const DEFAULT_AI_ALIAS = 'ollama';
+export const DEFAULT_AI_BASE_URL = 'http://127.0.0.1:11434/v1';
+export const DEFAULT_AI_MODEL = 'eburon-code-fast:latest';
+export const DEFAULT_AI_API_KEY = 'ollama';
+
 export const AVAILABLE_LANGUAGES = [
   'Flemish',
   'Abkhaz',

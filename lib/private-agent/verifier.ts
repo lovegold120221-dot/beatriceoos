@@ -13,7 +13,8 @@
  * @license SPDX-License-Identifier: Apache-2.0
  */
 
-import { GoogleGenAI } from '@google/genai';
+import { callLLM } from './llm-client';
+import type { LlmConfig, LlmMessage } from './llm-client';
 import type { ScreenSnapshot, VerificationStatus } from './types';
 
 export interface VerificationOutcome {
@@ -69,8 +70,7 @@ export async function verifyScreenState(
   current: ScreenSnapshot,
   expectedHint: string,
   goal: string,
-  apiKey: string,
-  model = 'gemini-2.5-flash',
+  llm: LlmConfig,
 ): Promise<VerificationOutcome> {
   // Fast path: if we have no layout text, we cannot verify anything.
   if (!current.layout || current.layout.trim().length === 0) {
@@ -83,27 +83,32 @@ export async function verifyScreenState(
   }
 
   try {
-    const genAI = new GoogleGenAI({ apiKey });
-    const response = await genAI.models.generateContent({
-      model,
-      contents:
-        `TASK GOAL: ${goal}\n\n` +
-        `EXPECTED SCREEN STATE: ${expectedHint}\n\n` +
-        `CURRENT SCREEN CONTENT (accessibility tree):\n${truncate(current.layout, 8000)}\n\n` +
-        `Does the current screen match the expected state? Extract only the verified facts ` +
-        `that directly answer the goal. Do not guess. If the screen does not match, say why.`,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: VERIFICATION_SCHEMA as any,
-        systemInstruction:
+    const messages: LlmMessage[] = [
+      {
+        role: 'system',
+        content:
           'You verify whether an Android screen matches an expected state after an automated action. ' +
           'You are given the accessibility tree of the current screen. You must be strict: only report ' +
           'observations that are explicitly present in the screen content. Never fabricate content. ' +
-          'If the expected state is not clearly present, set matchesExpectation=false.',
+          'If the expected state is not clearly present, set matchesExpectation=false.\n\n' +
+          'Respond ONLY with valid JSON matching this schema:\n' +
+          JSON.stringify(VERIFICATION_SCHEMA, null, 2),
       },
-    });
+      {
+        role: 'user',
+        content:
+          `TASK GOAL: ${goal}\n\n` +
+          `EXPECTED SCREEN STATE: ${expectedHint}\n\n` +
+          `CURRENT SCREEN CONTENT (accessibility tree):\n${truncate(current.layout, 8000)}\n\n` +
+          `Does the current screen match the expected state? Extract only the verified facts ` +
+          `that directly answer the goal. Do not guess. If the screen does not match, say why.`,
+      },
+    ];
 
-    const parsed = JSON.parse(response.text ?? '{}') as {
+    const llmResponse = await callLLM(messages, llm);
+    if (!llmResponse.text) throw new Error(llmResponse.error ?? 'LLM returned empty response');
+
+    const parsed = JSON.parse(llmResponse.text) as {
       matchesExpectation?: boolean;
       observations?: string[];
       mismatchReason?: string | null;
@@ -150,15 +155,13 @@ export async function verifyScreenState(
 export async function verifyFinalOutcome(
   finalScreen: ScreenSnapshot,
   goal: string,
-  apiKey: string,
-  model = 'gemini-2.5-flash',
+  llm: LlmConfig,
 ): Promise<VerificationOutcome> {
   return verifyScreenState(
     finalScreen,
     `The task goal has been achieved: ${goal}`,
     goal,
-    apiKey,
-    model,
+    llm,
   );
 }
 

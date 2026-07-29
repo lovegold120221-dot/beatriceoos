@@ -18,16 +18,14 @@ void overlayMain() {
         canvasColor: Colors.transparent,
         scaffoldBackgroundColor: Colors.transparent,
         cardColor: Colors.white,
-        dialogBackgroundColor: Colors.transparent,
         primaryColor: const Color(0xFF4F46E5),
         useMaterial3: true,
         colorScheme: const ColorScheme.light(
-          background: Colors.transparent,
           primary: Color(0xFF4F46E5),
           surface: Colors.white,
           onSurface: Color(0xFF1E293B),
           onPrimary: Colors.white,
-        ),
+        ), dialogTheme: DialogThemeData(backgroundColor: Colors.transparent),
       ),
       builder: (context, child) {
         return Container(color: Colors.transparent, child: child);
@@ -157,7 +155,7 @@ class PrivateAgentApp extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color: const Color(0xFF243049).withOpacity(0.4),
+                  color: const Color(0xFF243049).withValues(alpha: 0.4),
                   width: 1.2,
                 ),
               ),

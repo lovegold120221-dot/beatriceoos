@@ -574,10 +574,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.orangeAccent.withOpacity(0.15),
+                    color: Colors.orangeAccent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: Colors.orangeAccent.withOpacity(0.3),
+                      color: Colors.orangeAccent.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -759,7 +759,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   BoxShadow(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.2),
+                    ).colorScheme.primary.withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
@@ -783,7 +783,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           color: Colors.white,
                           size: 16,
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Text(
                           'New Chat',
                           style: TextStyle(
@@ -853,14 +853,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         color: isCurrent
                             ? Theme.of(
                                 context,
-                              ).colorScheme.primary.withOpacity(0.08)
+                              ).colorScheme.primary.withValues(alpha: 0.08)
                             : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                         border: isCurrent
                             ? Border.all(
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.primary.withOpacity(0.15),
+                                ).colorScheme.primary.withValues(alpha: 0.15),
                               )
                             : null,
                       ),
@@ -896,7 +896,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           icon: Icon(
                             Icons.delete_outline_rounded,
                             size: 16,
-                            color: Colors.redAccent.withOpacity(0.7),
+                            color: Colors.redAccent.withValues(alpha: 0.7),
                           ),
                           onPressed: () async {
                             await ChatHistoryService.deleteSession(session.id);
@@ -982,11 +982,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 gradient: RadialGradient(
                   colors: [
                     isDark
-                        ? const Color(0xFF6366F1).withOpacity(0.24)
-                        : const Color(0xFF4F46E5).withOpacity(0.12),
+                        ? const Color(0xFF6366F1).withValues(alpha: 0.24)
+                        : const Color(0xFF4F46E5).withValues(alpha: 0.12),
                     isDark
-                        ? const Color(0xFF6366F1).withOpacity(0)
-                        : const Color(0xFF4F46E5).withOpacity(0),
+                        ? const Color(0xFF6366F1).withValues(alpha: 0)
+                        : const Color(0xFF4F46E5).withValues(alpha: 0),
                   ],
                 ),
               ),
@@ -1003,11 +1003,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 gradient: RadialGradient(
                   colors: [
                     isDark
-                        ? const Color(0xFF38BDF8).withOpacity(0.18)
-                        : const Color(0xFF0EA5E9).withOpacity(0.09),
+                        ? const Color(0xFF38BDF8).withValues(alpha: 0.18)
+                        : const Color(0xFF0EA5E9).withValues(alpha: 0.09),
                     isDark
-                        ? const Color(0xFF38BDF8).withOpacity(0)
-                        : const Color(0xFF0EA5E9).withOpacity(0),
+                        ? const Color(0xFF38BDF8).withValues(alpha: 0)
+                        : const Color(0xFF0EA5E9).withValues(alpha: 0),
                   ],
                 ),
               ),
@@ -1029,7 +1029,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           color: activeBg,
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
           ),
         ),
         child: Row(
@@ -1080,7 +1080,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   BoxShadow(
                     color: Theme.of(
                       context,
-                    ).colorScheme.primary.withOpacity(0.20),
+                    ).colorScheme.primary.withValues(alpha: 0.20),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -1223,14 +1223,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isDark
-                                ? const Color(0xFF243049).withOpacity(0.4)
+                                ? const Color(0xFF243049).withValues(alpha: 0.4)
                                 : const Color(0xFFE2E8F0),
                             width: 1.2,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(
-                                isDark ? 0.1 : 0.02,
+                              color: Colors.black.withValues(
+                                alpha: isDark ? 0.1 : 0.02,
                               ),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
@@ -1278,18 +1278,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               border: Border.all(
                 color: _isListening
                     ? Colors.redAccent
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
                 width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
                 if (_isListening)
                   BoxShadow(
-                    color: Colors.redAccent.withOpacity(0.4),
+                    color: Colors.redAccent.withValues(alpha: 0.4),
                     blurRadius: 12,
                     spreadRadius: 2,
                   ),
@@ -1316,12 +1316,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 border: Border.all(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.08),
+                  ).colorScheme.onSurface.withValues(alpha: 0.08),
                   width: 1.2,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
+                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),

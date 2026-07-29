@@ -43,6 +43,11 @@ class DeviceControlService {
   bool _shizukuEnabled = false;
   bool _accessibilityEnabled = false;
   String _workspacePath = '/storage/shared/opencode';
+  // PC Remote Control fields (desktop platforms only)
+  bool _pcEnabled = true;
+  String _pcSshHost = '127.0.0.1';
+  String _pcSshUser = '';
+  String _pcSshPort = '22';
 
   bool get isConnected => _connected;
   String get baseUrl => _baseUrl;
@@ -54,6 +59,10 @@ class DeviceControlService {
   bool get shizukuEnabled => _shizukuEnabled;
   bool get accessibilityEnabled => _accessibilityEnabled;
   String get workspacePath => _workspacePath;
+  bool get pcEnabled => _pcEnabled;
+  String get pcSshHost => _pcSshHost;
+  String get pcSshUser => _pcSshUser;
+  String get pcSshPort => _pcSshPort;
 
   void setBaseUrl(String url) => _baseUrl = url;
   void setAdbEnabled(bool v) => _adbEnabled = v;
@@ -64,8 +73,12 @@ class DeviceControlService {
   void setShizukuEnabled(bool v) => _shizukuEnabled = v;
   void setAccessibilityEnabled(bool v) => _accessibilityEnabled = v;
   void setWorkspacePath(String v) => _workspacePath = v;
+  void setPcEnabled(bool v) => _pcEnabled = v;
+  void setPcSshHost(String v) => _pcSshHost = v;
+  void setPcSshUser(String v) => _pcSshUser = v;
+  void setPcSshPort(String v) => _pcSshPort = v;
 
-  /// Apply persisted device-control settings.
+  /// Apply persisted device-control settings (including PC SSH fields).
   void applySettings(DeviceControlSettings settings) {
     _baseUrl = settings.mobileUseUrl;
     _workspacePath = settings.workspacePath;
@@ -76,6 +89,10 @@ class DeviceControlService {
     _adbTcpIpPort = settings.adbTcpIpPort;
     _shizukuEnabled = settings.shizukuEnabled;
     _accessibilityEnabled = settings.accessibilityServiceEnabled;
+    _pcEnabled = settings.pcEnabled;
+    _pcSshHost = settings.pcSshHost;
+    _pcSshUser = settings.pcSshUser;
+    _pcSshPort = settings.pcSshPort;
   }
 
   Map<String, dynamic> toJson() => {
@@ -88,6 +105,10 @@ class DeviceControlService {
         'shizukuEnabled': _shizukuEnabled,
         'accessibilityEnabled': _accessibilityEnabled,
         'workspacePath': _workspacePath,
+        'pcEnabled': _pcEnabled,
+        'pcSshHost': _pcSshHost,
+        'pcSshUser': _pcSshUser,
+        'pcSshPort': _pcSshPort,
       };
 
   Future<bool> connect() async {

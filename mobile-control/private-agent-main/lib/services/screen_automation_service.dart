@@ -196,8 +196,9 @@ class ScreenAutomationService {
 
       // Simplify type
       String type = className.split('.').last;
-      if (type == 'TextView') type = 'text';
-      else if (type == 'Button') type = 'btn';
+      if (type == 'TextView') {
+        type = 'text';
+      } else if (type == 'Button') type = 'btn';
       else if (type == 'Switch') type = 'toggle';
       else if (type == 'ImageView') type = 'img';
       else if (type == 'EditText') type = 'input';

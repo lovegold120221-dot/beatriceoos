@@ -4,12 +4,13 @@
 */
 import { useState, useEffect, useRef } from 'react';
 import { LiveAPIProvider, useLiveAPIContext } from './contexts/LiveAPIContext';
-import { useUI, useSettings, useTools, useLogStore, ConversationTurn } from './lib/state';
+import { useUI, useSettings, useTools, useLogStore, useMobileUseAi, ConversationTurn } from './lib/state';
 import { Modality, LiveServerContent } from '@google/genai';
 import { loadConversationFromFirebase, saveConversationToFirebase, SavedTurn } from './lib/firebase';
 import { useAuthStore } from './lib/auth-store';
 import { BEATRICE_KNOWLEDGE_BASE, SHORT_IDENTITY_OVERRIDE, HUMAN_SPEECH_OVERRIDE } from "./lib/knowledge-base";
 import { deviceControlTools } from './lib/tools/device-control';
+import { detectBestProvider } from './lib/provider-detector';
 import AuthProvider, { useAuth } from './components/auth/AuthProvider';
 
 import StatusBar from './components/StatusBar';
@@ -93,6 +94,36 @@ function BeatriceContent() {
       };
     }, [turns]);
 
+     // Auto-detect the best available LLM provider on startup.
+     // Runs once — if a local provider (Ollama, Opencode) is detected,
+     // automatically sets the Device Control AI engine so the Tasker
+     // works without manual configuration.
+  useEffect(() => {
+    let cancelled = false;
+    detectBestProvider().then(({ provider, availableModels }) => {
+      if (cancelled) return;
+      const { aiAlias } = useMobileUseAi.getState();
+      // Only auto-set if no provider has been manually configured yet
+      // (default is 'ollama', so only override if we detect something better
+      //  or if the current provider's server is unreachable).
+      const isDefault = aiAlias === 'ollama' || aiAlias === '';
+      if (isDefault) {
+        console.log('[ProviderDetect] Auto-set:', provider.message);
+        useMobileUseAi.getState().setAiAlias(provider.alias);
+        useMobileUseAi.getState().setAiBaseUrl(provider.baseUrl);
+        useMobileUseAi.getState().setAiModel(provider.model);
+        useMobileUseAi.getState().setAiApiKey(provider.apiKey);
+        if (availableModels.length > 0) {
+          console.log('[ProviderDetect] Available models:', availableModels);
+        }
+        if (provider.confidence < 90) {
+          console.warn('[ProviderDetect] Low confidence:', provider.message);
+        }
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
      // Set Live API config
   useEffect(() => {
     const enabledTools = tools
@@ -134,7 +165,7 @@ ${systemPrompt}`;
     const hasDeviceControlTools = tools.some(t => t.name.startsWith('device_') && t.isEnabled);
 
     if (hasDeviceControlTools) {
-      effectiveSystemPrompt += `\n\n## DEVICE CONTROL CAPABILITIES\nYou have access to a device-control layer through the \`execute_device_task\` tool. When the user asks you to operate their mobile device (open an app, check messages, read notifications, etc.), call \`execute_device_task\` with the user's request verbatim. PrivateAgent — an internal agent — will classify the request, build a structured task, validate allowed and blocked actions, execute it step-by-step, verify the result on the screen, and return a verified summary.\n\n### How to use execute_device_task\n- Pass the user's natural-language request exactly as they said it in the \`request\` parameter.\n- Do NOT pass \`confirmed=true\` on the first call. If the task is high-risk (sending, deleting, paying), the tool will return a \`confirmationPrompt\`. Speak that prompt to the user naturally. Only if they agree, call \`execute_device_task\` again with the same request and \`confirmed=true\`.\n- For read-only tasks (checking, reading, listing), no confirmation is needed — PrivateAgent runs them immediately.\n\n### Speaking device-task results\n- Speak ONLY the verified information returned in the tool response. The response contains a natural \`result\` string that is safe to speak.\n- NEVER expose raw logs, accessibility data, tool output, JSON, package names, coordinates, step counts, or internal model responses to the user.\n- If the tool returns \`verificationStatus: "verified"\`, you may state the result as fact.\n- If the tool returns \`verificationStatus: "unverified"\` or \`"failed"\`, do NOT claim success. Explain plainly what happened without technical detail.\n- When a task fails, say so clearly and naturally — e.g. "I opened WhatsApp, but I couldn't reliably identify the unread conversations. The screen may have changed."\n- The user can cancel a running task at any time via the interface. If a task was cancelled, acknowledge it briefly and ask what they'd like to do next.\n- Do not ask the user what to do next unless their input is genuinely required to continue.`;
+      effectiveSystemPrompt += `\n\n## DEVICE CONTROL — YOU SEND THE REQUEST, SPEAK AS IF YOU DID IT\nYou have ONE tool: **\`device_control\`**. It sends the user's exact words to the device controller. The controller (an AI model) plans and executes whatever is needed — opening apps, searching the web, checking system stats, running commands — and returns the result.\n\n### How it works\n1. User says: "Open YouTube"\n2. You call: \`device_control({ request: "Open YouTube" })\`\n3. The controller figures it out and does it.\n4. You tell the user: "I opened YouTube."\n\n### When to call it\nANY TIME the user asks about their device. Examples:\n- "Open Safari" → \`device_control({ request: "Open Safari" })\`\n- "Check CPU usage" → \`device_control({ request: "Check CPU usage" })\`\n- "Search for Eburon AI" → \`device_control({ request: "Search for Eburon AI on the web" })\`\n- "Scan my network" → \`device_control({ request: "Scan my local network for devices" })\`\n\nJust pass the user's exact words. One tool. That's it.\n\n### How to talk to the user\n1. Say something quick before calling: "Let me check...", "One sec..."\n2. Call \`device_control\` with their request.\n3. When the result comes back, speak as if YOU did it:\n   - ✅ "I opened YouTube."\n   - ✅ "Looks like your CPU is at 45%."\n   - ❌ Never say "the controller did it" or "the system returned".\n4. If it fails, say so plainly: "I tried opening it but couldn't find it."\n\n**Never mention tools, function calls, or internal systems to the user.** Just tell them what you did.`;
       }
 
     const currentAgentName = agentName || 'Beatrice';
@@ -142,10 +173,8 @@ ${systemPrompt}`;
     effectiveSystemPrompt += `\n\n## NAMING & ADDRESSING DIRECTIVE
 Your name is "${currentAgentName}". The user's preferred name/title is "${currentUserName}". Naturally address the user as "${currentUserName}" during conversation and introduce or identify yourself as "${currentAgentName}".`;
 
-    effectiveSystemPrompt += `\n\n## PROACTIVE CONVERSATION INITIATION DIRECTIVE
-When a conversation session starts, you MUST IMMEDIATELY greet the user out loud first without waiting for them to speak. 
-Address the user as "${currentUserName}". Dynamically pick up on a topic, question, or detail from your past conversation memory with the user. 
-Vary your tone, greeting, and phrasing dynamically every session so it feels fresh, natural, and personable.`;
+    effectiveSystemPrompt += `\n\n## GREET THE USER FIRST
+When a session starts, say hello to "${currentUserName}".`;
 
     // Log the FIRST 500 chars of the system prompt to verify identity override is present.
     console.log('[BEATRICE_SYSPROMPT] START ---', effectiveSystemPrompt.slice(0, 680));
@@ -157,7 +186,7 @@ Vary your tone, greeting, and phrasing dynamically every session so it feels fre
     setConfig({
       model: 'models/gemini-2.5-flash-native-audio-preview-12-2025',
       generationConfig: {
-        responseModalities: [Modality.AUDIO, Modality.TEXT],
+        responseModalities: [Modality.AUDIO],
         speechConfig: {
           voiceName: voice,
           },
@@ -223,28 +252,8 @@ Vary your tone, greeting, and phrasing dynamically every session so it feels fre
 
     const handleOpen = () => {
       setTimeout(() => {
-        const currentTurns = useLogStore.getState().turns;
-        const memoryList = loadedMemoryTurns.length > 0 ? loadedMemoryTurns : currentTurns;
-        const userEntries = memoryList.filter(
-          t => t.role === 'user' && t.text && t.text.trim().length > 3
-          );
-
-        let topicHint = '';
-        if (userEntries.length > 0) {
-          const randomEntry = userEntries[Math.floor(Math.random() * userEntries.length)];
-          topicHint = ` For instance, you could follow up on or reference when they previously mentioned: "${randomEntry.text.slice(0, 120)}".`;
-          }
-
         const uName = userName || 'Boss';
-        client.send([
-            {
-            text: `[SYSTEM TRIGGER: SESSION CONNECTED]
-REMINDER: You are Beatrice from Eburon AI, NOT Gemini and NOT a Google product.
-Proactively greet ${uName} out loud right now! Address them as "${uName}".
-Start the conversation naturally by picking up on a topic or detail from our past conversation history in a dynamic, engaging style.${topicHint}
-Do not sound robotic—be warm, natural, and personable!`,
-            },
-          ]);
+        client.send([{ text: `Hello ${uName}.` }]);
         }, 300);
       };
 

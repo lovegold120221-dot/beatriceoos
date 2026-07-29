@@ -19,6 +19,29 @@ interface MobileUseStatus {
   androidVersion: string | null;
 }
 
+/** Device-level settings that the bridge sends as execution context. */
+export interface DeviceContext {
+  workspacePath: string;
+  adbEnabled: boolean;
+  adbRootEnabled: boolean;
+  adbTcpIpEnabled: boolean;
+  adbTcpIpAddress: string;
+  adbTcpIpPort: string;
+  shizukuEnabled: boolean;
+  accessibilityServiceEnabled: boolean;
+}
+
+const DEFAULT_DEVICE_CONTEXT: DeviceContext = {
+  workspacePath: '/storage/shared/opencode',
+  adbEnabled: true,
+  adbRootEnabled: false,
+  adbTcpIpEnabled: false,
+  adbTcpIpAddress: '',
+  adbTcpIpPort: '5555',
+  shizukuEnabled: false,
+  accessibilityServiceEnabled: false,
+};
+
 interface MobileUseResult {
   success: boolean;
   data: unknown;
@@ -30,10 +53,10 @@ class MobileUseBridge {
   private baseUrl: string;
   private connected: boolean = false;
   private deviceInfo: MobileUseStatus | null = null;
-  private workspacePath: string = '/storage/shared/opencode';
+  private deviceContext: DeviceContext = { ...DEFAULT_DEVICE_CONTEXT };
 
   constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || 'http://127.0.0.1:4096';
+    this.baseUrl = baseUrl || 'http://127.0.0.1:4097';
   }
 
   setBaseUrl(url: string): void {
@@ -45,11 +68,53 @@ class MobileUseBridge {
   }
 
   setWorkspacePath(path: string): void {
-    this.workspacePath = path?.trim() || '/storage/shared/opencode';
+    this.deviceContext.workspacePath = path?.trim() || '/storage/shared/opencode';
   }
 
   getWorkspacePath(): string {
-    return this.workspacePath;
+    return this.deviceContext.workspacePath;
+  }
+
+  /**
+   * Apply all device-level settings at once. The bridge sends these as
+   * execution context with every action so the server knows which access
+   * methods the user has enabled.
+   */
+  setDeviceSettings(settings: Partial<DeviceContext>): void {
+    this.deviceContext = { ...this.deviceContext, ...settings };
+  }
+
+  /** Returns a copy of the current device context. */
+  getDeviceSettings(): DeviceContext {
+    return { ...this.deviceContext };
+  }
+
+  /**
+   * Apply settings from the zustand store keyed the same as
+   * useDeviceControl fields, then reconnect.
+   */
+  applyStoreSettings(settings: {
+    mobileUseUrl?: string;
+    workspacePath?: string;
+    adbEnabled?: boolean;
+    adbRootEnabled?: boolean;
+    adbTcpIpEnabled?: boolean;
+    adbTcpIpAddress?: string;
+    adbTcpIpPort?: string;
+    shizukuEnabled?: boolean;
+    accessibilityServiceEnabled?: boolean;
+  }): void {
+    if (settings.mobileUseUrl) this.setBaseUrl(settings.mobileUseUrl);
+    this.setDeviceSettings({
+      workspacePath: settings.workspacePath,
+      adbEnabled: settings.adbEnabled,
+      adbRootEnabled: settings.adbRootEnabled,
+      adbTcpIpEnabled: settings.adbTcpIpEnabled,
+      adbTcpIpAddress: settings.adbTcpIpAddress,
+      adbTcpIpPort: settings.adbTcpIpPort,
+      shizukuEnabled: settings.shizukuEnabled,
+      accessibilityServiceEnabled: settings.accessibilityServiceEnabled,
+    });
   }
 
   async connect(): Promise<boolean> {
@@ -141,6 +206,22 @@ class MobileUseBridge {
     }
   }
 
+  /**
+   * Sets the connected flag to true without making a network request.
+   * Use this when you've already confirmed the bridge is healthy via
+   * an external check (e.g. autoStartBridge's raw fetch) and don't
+   * want a redundant round-trip.
+   */
+  markConnected(): void {
+    this.connected = true;
+    this.deviceInfo = {
+      connected: true,
+      deviceId: null,
+      deviceModel: null,
+      androidVersion: null,
+    };
+  }
+
   disconnect(): void {
     this.connected = false;
     this.deviceInfo = null;
@@ -176,7 +257,8 @@ class MobileUseBridge {
         body: JSON.stringify({
           action,
           request,
-          workspacePath: this.workspacePath,
+          workspacePath: this.deviceContext.workspacePath,
+          deviceSettings: this.deviceContext, // ← sends full device context with every action
         }),
         signal: AbortSignal.timeout(30000),
       });
@@ -265,6 +347,48 @@ class MobileUseBridge {
 
   async notify(title: string, message: string): Promise<MobileUseResult> {
     return this.executeAction('notify', { title, message });
+  }
+
+  // ─── PocketStrike-Style Actions ─────────────────────────────────
+
+  async getSystemStats(): Promise<MobileUseResult> {
+    return this.executeAction('get_system_stats', {});
+  }
+
+  async scanWifiNetworks(): Promise<MobileUseResult> {
+    return this.executeAction('scan_wifi_networks', {});
+  }
+
+  async takeCameraPhoto(cameraId = '0'): Promise<MobileUseResult> {
+    return this.executeAction('take_camera_photo', { cameraId });
+  }
+
+  async sendSms(number: string, message: string): Promise<MobileUseResult> {
+    return this.executeAction('send_sms', { number, message });
+  }
+
+  async makePhoneCall(number: string): Promise<MobileUseResult> {
+    return this.executeAction('make_phone_call', { number });
+  }
+
+  async getPhoneLocation(): Promise<MobileUseResult> {
+    return this.executeAction('get_phone_location', {});
+  }
+
+  async speakText(text: string): Promise<MobileUseResult> {
+    return this.executeAction('speak_text', { text });
+  }
+
+  async webSearch(query: string): Promise<MobileUseResult> {
+    return this.executeAction('web_search', { query });
+  }
+
+  async localNetworkScan(): Promise<MobileUseResult> {
+    return this.executeAction('local_network_scan', {});
+  }
+
+  async pcControl(action: string, appName?: string, command?: string): Promise<MobileUseResult> {
+    return this.executeAction('pc_control', { action, appName, command });
   }
 }
 

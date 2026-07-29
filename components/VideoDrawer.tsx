@@ -22,7 +22,6 @@ export default function VideoDrawer({ isOpen, onClose }: VideoDrawerProps) {
   }, [videoStream, mode]);
 
   useEffect(() => {
-    // Send video frame every 1 second if connected and stream is active
     if (connected && mode !== 'none' && videoStream) {
       intervalRef.current = setInterval(() => {
         if (!videoRef.current || !canvasRef.current) return;
@@ -106,15 +105,38 @@ export default function VideoDrawer({ isOpen, onClose }: VideoDrawerProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="drawer-overlay" onClick={onClose}>
-      <div className="drawer-content video-drawer" onClick={e => e.stopPropagation()}>
+    <div className="drawer-overlay full-screen" onClick={onClose}>
+      <div
+        className="drawer-content video-drawer full-screen"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ─── Header ─── */}
         <div className="drawer-header">
-          <h3>Video Input</h3>
-          <button className="drawer-close-btn" onClick={onClose} aria-label="Close drawer">
-            &times;
-          </button>
+          <div className="drawer-header-left">
+            <div className={`drawer-connection-badge ${connected ? 'connected' : ''}`}>
+              <span className={`dcb-dot ${connected ? 'live' : ''}`} />
+              <span className="dcb-label">{connected ? 'Live' : 'Offline'}</span>
+            </div>
+          </div>
+          <div className="drawer-header-center">
+            <span className="drawer-title-text">Video Input</span>
+            {mode !== 'none' && (
+              <span className="drawer-message-count vid-active">
+                {mode === 'webcam' ? '📷' : '🖥️'}
+              </span>
+            )}
+          </div>
+          <div className="drawer-header-right">
+            <button className="drawer-close-btn" onClick={onClose} aria-label="Close drawer">
+              <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
         </div>
 
+        {/* ─── Error Banner ─── */}
         {errorMessage && (
           <div className="video-error-banner">
             <span>⚠️ {errorMessage}</span>
@@ -122,38 +144,72 @@ export default function VideoDrawer({ isOpen, onClose }: VideoDrawerProps) {
           </div>
         )}
 
+        {/* ─── Video Preview ─── */}
         <div className="video-preview-area">
           {mode !== 'none' && videoStream ? (
             <div className="video-container">
               <video ref={videoRef} autoPlay playsInline muted />
               <canvas ref={canvasRef} style={{ display: 'none' }} />
               <div className="video-live-tag">
-                <span className="live-dot" /> Streaming {mode === 'webcam' ? 'Camera' : 'Screen'}
+                <span className="live-dot" />
+                <span className="vlt-label">
+                  {mode === 'webcam' ? 'Camera' : 'Screen'}
+                </span>
               </div>
+              <div className="video-fps-tag">1 FPS</div>
             </div>
           ) : (
             <div className="empty-video-state">
-              <div className="video-icon">📹</div>
-              <p>Camera or Screen Share</p>
-              <p className="empty-sub">Stream visual inputs directly to Beatrice for real-time visual perception.</p>
+              <div className="empty-video-glow" />
+              <div className="empty-video-icon">
+                <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" fill="none" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 7l-7 5 7 5V7z" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+              </div>
+              <div className="empty-video-title">No video source</div>
+              <div className="empty-video-hint">
+                Share your camera or screen so Beatrice can see what you see — in real time.
+              </div>
             </div>
           )}
         </div>
 
+        {/* ─── Controls ─── */}
         <div className="video-controls-row">
           {mode === 'none' ? (
             <>
               <button className="video-btn primary" onClick={startWebcam}>
-                📷 Start Camera
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 7l-7 5 7 5V7z" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+                Camera
               </button>
               <button className="video-btn secondary" onClick={startScreenShare}>
-                🖥️ Share Screen
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+                Screen
               </button>
             </>
           ) : (
-            <button className="video-btn danger" onClick={stopStream}>
-              ⏹️ Stop Video
-            </button>
+            <div className="video-stop-row">
+              <div className="video-active-info">
+                <span className="vai-dot" />
+                <span className="vai-label">
+                  {mode === 'webcam' ? 'Camera active' : 'Screen sharing'}
+                </span>
+              </div>
+              <button className="video-btn danger" onClick={stopStream}>
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="currentColor" strokeWidth="0">
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                </svg>
+                Stop
+              </button>
+            </div>
           )}
         </div>
       </div>

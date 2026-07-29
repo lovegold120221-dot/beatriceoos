@@ -111,8 +111,8 @@ class ChatDrawer extends StatelessWidget {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: 380),
       child: turns.isEmpty
-          ? Column(
-              children: const [
+          ? const Column(
+              children: [
                 SizedBox(height: 40),
                 Icon(Icons.chat, size: 36, color: AppTheme.textMuted),
                 SizedBox(height: 12),
@@ -216,7 +216,7 @@ class ChatDrawer extends StatelessWidget {
               onSubmitted: connected ? (v) => onSend(v) : null,
               decoration: InputDecoration(
                 hintText: connected ? 'Type a message to Beatrice...' : 'Connect session to send text...',
-                hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
                 filled: true,
                 fillColor: AppTheme.card,
                 border: OutlineInputBorder(

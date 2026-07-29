@@ -23,8 +23,9 @@ const systemPrompts: Record<Template, string> = {
   'navigation-system': 'You are a helpful and friendly navigation assistant. Provide clear and accurate directions.',
   'device-control': "You are Beatrice's internal device-control agent. You operate the authorised mobile device on the user's behalf. When the user asks you to interact with their phone, you must execute the appropriate device action and verify the result before reporting back to Beatrice. Only confirm completion after verifying the action succeeded on the device.",
 };
-import { DEFAULT_LIVE_API_MODEL, DEFAULT_VOICE, DEFAULT_LANGUAGE, DEFAULT_NUANCE, DEFAULT_USER_NAME, DEFAULT_AGENT_NAME } from './constants';
+import { DEFAULT_LIVE_API_MODEL, DEFAULT_VOICE, DEFAULT_LANGUAGE, DEFAULT_NUANCE, DEFAULT_USER_NAME, DEFAULT_AGENT_NAME, DEFAULT_AI_ALIAS, DEFAULT_AI_BASE_URL, DEFAULT_AI_MODEL, DEFAULT_AI_API_KEY, AI_PROVIDER_PRESETS } from './constants';
 import { DEFAULT_SYSTEM_PROMPT } from './prompts';
+import { getMobileUseBridge } from './mobile-use/bridge';
 import {
   FunctionResponse,
   FunctionResponseScheduling,
@@ -80,6 +81,10 @@ export const useDeviceControl = create<{
   shizukuEnabled: boolean;
   accessibilityServiceEnabled: boolean;
   workspacePath: string;
+  pcEnabled: boolean;
+  pcSshHost: string;
+  pcSshUser: string;
+  pcSshPort: string;
   setMobileUseUrl: (url: string) => void;
   setMobileUseConnected: (connected: boolean) => void;
   setAdbEnabled: (enabled: boolean) => void;
@@ -90,8 +95,14 @@ export const useDeviceControl = create<{
   setShizukuEnabled: (enabled: boolean) => void;
   setAccessibilityServiceEnabled: (enabled: boolean) => void;
   setWorkspacePath: (path: string) => void;
+  setPcEnabled: (enabled: boolean) => void;
+  setPcSshHost: (host: string) => void;
+  setPcSshUser: (user: string) => void;
+  setPcSshPort: (port: string) => void;
+  /** Reconnect the bridge with the current settings. Call after changing URL, workspace, or toggles. */
+  reconnectBridge: () => Promise<boolean>;
 }>(set => ({
-  mobileUseUrl: 'http://127.0.0.1:4096',
+  mobileUseUrl: 'http://127.0.0.1:4097',
   mobileUseConnected: false,
   adbEnabled: true,
   adbRootEnabled: false,
@@ -101,6 +112,10 @@ export const useDeviceControl = create<{
   shizukuEnabled: false,
   accessibilityServiceEnabled: false,
   workspacePath: '/storage/shared/opencode',
+  pcEnabled: true,
+  pcSshHost: '127.0.0.1',
+  pcSshUser: '',
+  pcSshPort: '22',
   setMobileUseUrl: url => set({ mobileUseUrl: url }),
   setMobileUseConnected: connected => set({ mobileUseConnected: connected }),
   setAdbEnabled: enabled => set({ adbEnabled: enabled }),
@@ -111,6 +126,63 @@ export const useDeviceControl = create<{
   setShizukuEnabled: enabled => set({ shizukuEnabled: enabled }),
   setAccessibilityServiceEnabled: enabled => set({ accessibilityServiceEnabled: enabled }),
   setWorkspacePath: path => set({ workspacePath: path }),
+  setPcEnabled: enabled => set({ pcEnabled: enabled }),
+  setPcSshHost: host => set({ pcSshHost: host }),
+  setPcSshUser: user => set({ pcSshUser: user }),
+  setPcSshPort: port => set({ pcSshPort: port }),
+  reconnectBridge: function () {
+    const state = useDeviceControl.getState();
+    const bridge = getMobileUseBridge();
+    bridge.applyStoreSettings({
+      mobileUseUrl: state.mobileUseUrl,
+      workspacePath: state.workspacePath,
+      adbEnabled: state.adbEnabled,
+      adbRootEnabled: state.adbRootEnabled,
+      adbTcpIpEnabled: state.adbTcpIpEnabled,
+      adbTcpIpAddress: state.adbTcpIpAddress,
+      adbTcpIpPort: state.adbTcpIpPort,
+      shizukuEnabled: state.shizukuEnabled,
+      accessibilityServiceEnabled: state.accessibilityServiceEnabled,
+    });
+    const p = bridge.connect();
+    p.then(function (c) { set({ mobileUseConnected: c }); });
+    return p;
+  },
+}));
+
+/**
+ * MobileUse AI Engine Settings (which LLM powers device control)
+ */
+export const useMobileUseAi = create<{
+  aiAlias: string;
+  aiBaseUrl: string;
+  aiApiKey: string;
+  aiModel: string;
+  setAiAlias: (alias: string) => void;
+  setAiBaseUrl: (url: string) => void;
+  setAiApiKey: (key: string) => void;
+  setAiModel: (model: string) => void;
+  applyPreset: (alias: string) => void;
+}>(set => ({
+  aiAlias: DEFAULT_AI_ALIAS,
+  aiBaseUrl: DEFAULT_AI_BASE_URL,
+  aiApiKey: DEFAULT_AI_API_KEY,
+  aiModel: DEFAULT_AI_MODEL,
+  setAiAlias: alias => set({ aiAlias: alias }),
+  setAiBaseUrl: url => set({ aiBaseUrl: url }),
+  setAiApiKey: key => set({ aiApiKey: key }),
+  setAiModel: model => set({ aiModel: model }),
+  applyPreset: (alias: string) => {
+    const preset = AI_PROVIDER_PRESETS.find(p => p.alias === alias);
+    if (preset) {
+      set({
+        aiAlias: preset.alias,
+        aiBaseUrl: preset.baseUrl,
+        aiApiKey: preset.apiKey,
+        aiModel: preset.model,
+      });
+    }
+  },
 }));
 
 /**
@@ -151,10 +223,10 @@ export const useTools = create<{
   removeTool: (toolName: string) => void;
   updateTool: (oldName: string, updatedTool: FunctionCall) => void;
 }>(set => ({
-  tools: [],
-  template: 'customer-support',
+  tools: deviceControlTools,
+  template: 'device-control',
   setTemplate: (template: Template) => {
-    set({ template });
+    set({ template, tools: toolsets[template] || [] });
     useSettings.getState().setSystemPrompt(systemPrompts[template]);
   },
   setTools: (tools: FunctionCall[]) => set({ tools }),

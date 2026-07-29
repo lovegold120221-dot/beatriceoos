@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "bridge": "node bridge-server.cjs",
+    "bridge:start": "node bridge-server.cjs 4096 &",
+    "bridge:stop": "pkill -f 'bridge-server' 2>/dev/null; echo 'Bridge server stopped'"
   },
   "dependencies": {
     "@google/genai": "^1.4.0",

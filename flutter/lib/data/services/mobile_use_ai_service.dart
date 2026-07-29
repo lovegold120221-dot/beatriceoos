@@ -47,17 +47,16 @@ class MobileUseAiService {
       String.fromEnvironment('OLLAMA_CLOUD_API_KEY', defaultValue: '');
 
   // ─── Provider Base URLs ──────────────────────────────────────────
-  static const String defaultBaseUrl = 'https://api.deepseek.com';
-  static const String defaultModel = 'deepseek-chat';
-
-  static const String nvidiaBaseUrl = 'https://integrate.api.nvidia.com/v1';
-  static const String nvidiaDefaultModel = 'z-ai/glm-5.2';
+  static const String defaultBaseUrl = 'http://localhost:11434/v1';
+  static const String defaultModel = 'gemma3:4b';
 
   static const String ollamaBaseUrl = 'http://localhost:11434/v1';
   static const String ollamaDefaultModel = 'gemma3:4b';
 
   static const String opencodeBaseUrl = 'http://127.0.0.1:4096/v1';
-  static const String opencodeDefaultModel = 'deepseek-chat';
+  static const String opencodeDefaultModel = 'opencode/deepseek-v4-flash-free';
+  static const String freebuffDefaultModel = 'opencode/deepseek-v4-flash-free';
+  static const String freebuffBaseUrl = 'http://127.0.0.1:4096/v1';
 
   static const String geminiBaseUrl =
       'https://generativelanguage.googleapis.com/v1beta/openai/';
@@ -66,44 +65,8 @@ class MobileUseAiService {
   static const String groqBaseUrl = 'https://api.groq.com/openai/v1';
   static const String groqDefaultModel = 'openai/gpt-oss-120b';
 
-  static const String deepseekBaseUrl = 'https://api.deepseek.com';
-  static const String deepseekDefaultModel = 'deepseek-chat';
-
   static const String ollamaCloudBaseUrl = 'https://api.ollama.ai/v1';
   static const String ollamaCloudDefaultModel = 'glm-5.2:cloud';
-
-  static const String openrouterBaseUrl = 'https://openrouter.ai/api/v1';
-  static const String openrouterDefaultModel = 'openai/gpt-oss-120b:free';
-
-  // ─── Free NVIDIA Chat Models ─────────────────────────────────────
-  static const List<String> nvidiaFreeChatModels = [
-    'z-ai/glm-5.2',
-    'nvidia/nemotron-3-nano-30b-a3b',
-    'nvidia/nemotron-3-super-120b-a12b',
-    'nvidia/nemotron-3-ultra-550b-a55b',
-    'nvidia/nvidia-nemotron-nano-9b-v2',
-    'openai/gpt-oss-20b',
-    'openai/gpt-oss-120b',
-    'meta/llama-3.3-70b-instruct',
-    'meta/llama-3.2-3b-instruct',
-    'meta/llama-3.1-8b-instruct',
-    'meta/llama-3.1-70b-instruct',
-    'mistralai/mistral-nemotron',
-    'deepseek-ai/deepseek-v4-flash',
-    'deepseek-ai/deepseek-v4-pro',
-  ];
-
-  static bool isNvidiaBaseUrl(String baseUrl) {
-    final uri = Uri.tryParse(baseUrl.trim());
-    return uri?.host.toLowerCase() == 'integrate.api.nvidia.com';
-  }
-
-  static List<String> filterNvidiaFreeModels(Iterable<String> models) {
-    final availableModels = models.toSet();
-    return nvidiaFreeChatModels
-        .where(availableModels.contains)
-        .toList(growable: false);
-  }
 
   // ─── Instance State ──────────────────────────────────────────────
   ApiClient? _api;
@@ -228,24 +191,17 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
   bool get useSystemPrompt => _useSystemPrompt;
 
   int get _effectiveMaxTokens {
-    if (isNvidiaBaseUrl(_baseUrl) &&
-        effectiveModel == nvidiaDefaultModel &&
-        _maxTokens < 4096) {
-      return 4096;
-    }
     return _maxTokens;
   }
 
   // ─── Alias → Model Name Resolution ──────────────────────────────
   static const Map<String, String> aliasToModel = {
     'eburon-os': geminiDefaultModel,
-    'eburon-beta': groqDefaultModel,
     'eburon-cloud': ollamaCloudDefaultModel,
     'eburon': ollamaDefaultModel,
-    'openbox': opencodeDefaultModel,
-    'deepseek': deepseekDefaultModel,
-    'nvidia': nvidiaDefaultModel,
-    'openrouter': openrouterDefaultModel,
+    'eburon-opencode': opencodeDefaultModel,
+    'freebuff': freebuffDefaultModel,
+    'eburon-beta': groqDefaultModel,
   };
 
   /// Resolve an alias name to the actual API model name.
@@ -274,13 +230,13 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
           'model': 'eburon',
           'description': 'Ollama local (Termux)'
         };
-      case 'openbox':
+      case 'eburon-opencode':
         return {
-          'alias': 'openbox',
+          'alias': 'eburon-opencode',
           'baseUrl': opencodeBaseUrl,
           'apiKey': 'dummy',
-          'model': 'openbox',
-          'description': 'OpenCode (Termux proot)'
+          'model': 'eburon-opencode',
+          'description': 'Opencode (local)'
         };
       case 'eburon-os':
         return {
@@ -288,23 +244,7 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
           'baseUrl': geminiBaseUrl,
           'apiKey': geminiHardcodedKey,
           'model': 'eburon-os',
-          'description': 'Gemini API (Eburon OS)'
-        };
-      case 'eburon-beta':
-        return {
-          'alias': 'eburon-beta',
-          'baseUrl': groqBaseUrl,
-          'apiKey': groqHardcodedKey,
-          'model': 'eburon-beta',
-          'description': 'Groq LPU (Eburon Beta)'
-        };
-      case 'deepseek':
-        return {
-          'alias': 'deepseek',
-          'baseUrl': deepseekBaseUrl,
-          'apiKey': '',
-          'model': 'deepseek',
-          'description': 'DeepSeek chat API'
+          'description': 'Gemini API'
         };
       case 'eburon-cloud':
         return {
@@ -312,23 +252,23 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
           'baseUrl': ollamaCloudBaseUrl,
           'apiKey': ollamaCloudHardcodedKey,
           'model': 'eburon-cloud',
-          'description': 'Ollama Cloud (Eburon Cloud)'
+          'description': 'Ollama Cloud'
         };
-      case 'nvidia':
+      case 'freebuff':
         return {
-          'alias': 'nvidia',
-          'baseUrl': nvidiaBaseUrl,
+          'alias': 'freebuff',
+          'baseUrl': freebuffBaseUrl,
           'apiKey': '',
-          'model': 'nvidia',
-          'description': 'NVIDIA NIM free tier'
+          'model': 'freebuff',
+          'description': 'Freebuff local proxy'
         };
-      case 'openrouter':
+      case 'eburon-beta':
         return {
-          'alias': 'openrouter',
-          'baseUrl': openrouterBaseUrl,
-          'apiKey': '',
-          'model': 'openrouter',
-          'description': 'Multi-model router'
+          'alias': 'eburon-beta',
+          'baseUrl': groqBaseUrl,
+          'apiKey': groqHardcodedKey,
+          'model': 'eburon-beta',
+          'description': 'Groq LPU'
         };
       default:
         return {
@@ -343,13 +283,11 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
 
   static List<Map<String, String>> get presets => [
         presetFor('eburon'),
-        presetFor('openbox'),
-        presetFor('eburon-os'),
-        presetFor('eburon-beta'),
-        presetFor('deepseek'),
+        presetFor('eburon-opencode'),
         presetFor('eburon-cloud'),
-        presetFor('nvidia'),
-        presetFor('openrouter'),
+        presetFor('eburon-os'),
+        presetFor('freebuff'),
+        presetFor('eburon-beta'),
       ];
 
   Future<void> applyPreset(Map<String, String> preset) async {
@@ -518,7 +456,6 @@ brainstorm, write emails/messages, and chat in plain text or markdown.
       if (dataList is! List) return [];
       final models =
           dataList.map((m) => (m is Map ? m['id'] : m).toString()).toList();
-      if (isNvidiaBaseUrl(cleanUrl)) return filterNvidiaFreeModels(models);
       models.sort();
       return models;
     } catch (e, s) {

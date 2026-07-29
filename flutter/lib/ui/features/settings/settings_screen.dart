@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -26,6 +28,30 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _showDeviceSettings = false;
   bool _showAiSettings = false;
   bool _showTools = false;
+  bool _showPcControl = false;
+
+  // ── Cross-platform auto-detection ──
+  // Detects the current OS and shows the relevant control panel:
+  // Desktop (macOS, Windows, Linux) → PC Remote Control
+  // Mobile (Android, iOS) → Mobile Device Control
+  final bool _isMobile = Platform.isAndroid || Platform.isIOS;
+  final bool _isDesktop = Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+  String get _platformLabel {
+    if (Platform.isMacOS) return 'macOS';
+    if (Platform.isWindows) return 'Windows';
+    if (Platform.isLinux) return 'Linux';
+    if (Platform.isAndroid) return 'Android';
+    if (Platform.isIOS) return 'iOS';
+    return 'Unknown';
+  }
+  String get _platformIcon {
+    if (Platform.isMacOS) return '\u{1F34E}';
+    if (Platform.isWindows) return '\u{1FA9F}';
+    if (Platform.isLinux) return '\u{1F427}';
+    if (Platform.isAndroid) return '\u{1F4F1}';
+    if (Platform.isIOS) return '\u{1F4F2}';
+    return '\u{1F4BB}';
+  }
 
   // Accessibility service status (live-checked via native MethodChannel).
   final ScreenAutomationService _screenAutomation = ScreenAutomationService();
@@ -45,22 +71,97 @@ class _SettingsScreenState extends State<SettingsScreen>
   late final TextEditingController _aiBaseUrlController;
   late final TextEditingController _aiModelController;
   String _aiProviderAlias = 'eburon';
+  List<String> _availableModels = [];
+  bool _modelsLoading = false;
+
+  // Known OpenCode Zen free models for fallback when HTTP /v1/models is unavailable.
+  static const _opencodeZenModels = [
+    'opencode/deepseek-v4-flash-free',
+    'opencode/mimo-v2.5-free',
+    'opencode/laguna-s-2.1-free',
+    'opencode/ling-3.0-flash-free',
+    'opencode/north-mini-code-free',
+    'opencode/nemotron-3-ultra-free',
+  ];
+
+  // Fallback models for cloud providers whose /v1/models may not respond.
+  static const Map<String, List<String>> _knownCloudModels = {
+    'eburon-cloud': [
+      'glm-5.2:cloud',
+      'llama-3.1:8b',
+      'llama-3.1:70b',
+      'mistral:7b',
+      'codellama:34b',
+    ],
+    'eburon-os': [
+      'gemini-3.1-flash-lite',
+      'gemini-3.1-pro',
+      'gemini-2.5-flash',
+      'gemini-2.5-pro',
+    ],
+    'eburon-beta': [
+      'openai/gpt-oss-120b',
+      'openai/gpt-oss-20b',
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
+      'mixtral-8x7b-32768',
+      'gemma2-9b-it',
+    ],
+  };
+
+  bool _isOpenCodeHost(String url) {
+    try {
+      final uri = Uri.parse(url);
+      return uri.port == 4096;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _fetchModels(String baseUrl, String apiKey) async {
+    if (baseUrl.isEmpty) return;
+    setState(() => _modelsLoading = true);
+    try {
+      if (_isOpenCodeHost(baseUrl)) {
+        setState(() => _availableModels = List.unmodifiable(_opencodeZenModels));
+        return;
+      }
+      final models = await MobileUseAiService.instance
+          .fetchAvailableModels(baseUrl, apiKey);
+      if (models.isNotEmpty) {
+        models.sort();
+        setState(() => _availableModels = models);
+      } else {
+        // API returned empty — fall back to known cloud models.
+        final fallback = _knownCloudModels[_aiProviderAlias];
+        setState(() => _availableModels = fallback != null ? List.unmodifiable(fallback) : []);
+      }
+    } catch (_) {
+      // Network error — fall back to known cloud models.
+      final fallback = _knownCloudModels[_aiProviderAlias];
+      setState(() => _availableModels = fallback != null ? List.unmodifiable(fallback) : []);
+    } finally {
+      setState(() => _modelsLoading = false);
+    }
+  }
 
   // Device-control controllers (bound to the VM's deviceControl).
   late final TextEditingController _urlController;
   late final TextEditingController _workspaceController;
   late final TextEditingController _adbAddressController;
   late final TextEditingController _adbPortController;
+  // PC Remote Control controllers (desktop only)
+  late final TextEditingController _pcSshHostController;
+  late final TextEditingController _pcSshUserController;
+  late final TextEditingController _pcSshPortController;
 
   static const _aiProviderChips = [
-    ('eburon-os', Icons.auto_awesome, Colors.blueAccent),
-    ('eburon-beta', Icons.flash_on, Colors.greenAccent),
-    ('eburon-cloud', Icons.cloud, Colors.cyanAccent),
     ('eburon', Icons.computer, Colors.orangeAccent),
-    ('openbox', Icons.code, Colors.purpleAccent),
-    ('deepseek', Icons.psychology, Colors.redAccent),
-    ('nvidia', Icons.memory, Colors.tealAccent),
-    ('openrouter', Icons.alt_route, Colors.yellowAccent),
+    ('eburon-opencode', Icons.code, Colors.purpleAccent),
+    ('eburon-cloud', Icons.cloud, Colors.cyanAccent),
+    ('eburon-os', Icons.auto_awesome, Colors.tealAccent),
+    ('freebuff', Icons.auto_awesome, Colors.blueAccent),
+    ('eburon-beta', Icons.flash_on, Colors.greenAccent),
   ];
 
   static const _voices = ['Aoede', 'Charon', 'Fenrir', 'Kore', 'Leda', 'Orus'];
@@ -79,6 +180,9 @@ class _SettingsScreenState extends State<SettingsScreen>
         TextEditingController(text: '/storage/shared/opencode');
     _adbAddressController = TextEditingController();
     _adbPortController = TextEditingController(text: '5555');
+    _pcSshHostController = TextEditingController(text: '127.0.0.1');
+    _pcSshUserController = TextEditingController();
+    _pcSshPortController = TextEditingController(text: '22');
     _loadSettings();
     _checkAccessibilityStatus();
   }
@@ -128,6 +232,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     _workspaceController.text = dc.workspacePath;
     _adbAddressController.text = dc.adbTcpIpAddress;
     _adbPortController.text = dc.adbTcpIpPort;
+    _pcSshHostController.text = dc.pcSshHost;
+    _pcSshUserController.text = dc.pcSshUser;
+    _pcSshPortController.text = dc.pcSshPort;
   }
 
   /// Apply a provider preset: update the controllers AND persist into the VM.
@@ -144,6 +251,15 @@ class _SettingsScreenState extends State<SettingsScreen>
       apiKey: preset['apiKey']!,
       model: preset['model']!,
     ));
+    // Auto-fetch models for all providers.
+    final newBaseUrl = preset['baseUrl']!;
+    _fetchModels(newBaseUrl, preset['apiKey']!);
+
+    // Resolve the model alias to the actual model name so it matches
+    // auto-detected or fallback model lists.
+    final resolvedModel = MobileUseAiService.resolveModel(preset['model']!);
+    _aiModelController.text = resolvedModel;
+    vm.setAiEngine(vm.aiEngine.copyWith(model: resolvedModel));
   }
 
   /// Test the device control connection with diagnostic.
@@ -270,7 +386,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ],
                   const SizedBox(height: 24),
 
-                  // ─── MobileUse AI Engine ───
+                  // ─── Device Control ───
                   InkWell(
                     onTap: () =>
                         setState(() => _showAiSettings = !_showAiSettings),
@@ -279,7 +395,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         const Icon(Icons.psychology, color: Color(0xFF00D4AA)),
                         const SizedBox(width: 8),
                         const Text(
-                          'MobileUse AI Engine',
+                          'Device Control',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -302,36 +418,74 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ],
                   const SizedBox(height: 24),
 
-                  // ─── Device Control Settings ───
-                  InkWell(
-                    onTap: () => setState(
-                        () => _showDeviceSettings = !_showDeviceSettings),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.phone_android,
-                            color: Color(0xFF00D4AA)),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Mobile Device Control',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                  // ─── PC Remote Control — desktop only ───
+                  if (_isDesktop) ...[
+                    InkWell(
+                      onTap: () => setState(
+                          () => _showPcControl = !_showPcControl),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.desktop_windows,
+                              color: Color(0xFF00D4AA)),
+                          const SizedBox(width: 8),
+                          Text(
+                            '$_platformIcon PC Remote Control',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        const Spacer(),
-                        Icon(
-                          _showDeviceSettings
-                              ? Icons.expand_less
-                              : Icons.expand_more,
-                          color: Colors.grey,
-                        ),
-                      ],
+                          const Spacer(),
+                          Icon(
+                            _showPcControl
+                                ? Icons.expand_less
+                                : Icons.expand_more,
+                            color: Colors.grey,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  if (_showDeviceSettings) ...[
-                    const SizedBox(height: 16),
-                    _buildDeviceSettings(vm),
+                    if (_showPcControl) ...[
+                      const SizedBox(height: 16),
+                      _buildPcControlSettings(vm),
+                    ],
+                    const SizedBox(height: 24),
+                  ],
+
+                  // ─── Device Control Settings — mobile only ───
+                  if (_isMobile) ...[
+                    InkWell(
+                      onTap: () => setState(
+                          () => _showDeviceSettings = !_showDeviceSettings),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.phone_android,
+                              color: Color(0xFF00D4AA)),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Mobile Device Control',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            _showDeviceSettings
+                                ? Icons.expand_less
+                                : Icons.expand_more,
+                            color: Colors.grey,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_showDeviceSettings) ...[
+                      const SizedBox(height: 16),
+                      _buildDeviceSettings(vm),
+                    ],
+                    const SizedBox(height: 24),
                   ],
                   const SizedBox(height: 24),
 
@@ -450,20 +604,40 @@ class _SettingsScreenState extends State<SettingsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Provider Presets',
+            'Provider',
             style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: Colors.white70),
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _aiProviderChips.map((c) {
-              final (alias, icon, color) = c;
-              return _providerChip(alias, icon, color);
+          DropdownButtonFormField<String>(
+            key: ValueKey('provider_dropdown_$_aiProviderAlias'),
+            initialValue: _aiProviderAlias,
+            decoration: const InputDecoration(
+              labelText: 'Select provider',
+              labelStyle: TextStyle(fontSize: 12, color: Colors.grey),
+              filled: true,
+              fillColor: AppTheme.surface,
+            ),
+            dropdownColor: AppTheme.surfaceElevated,
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+            items: _aiProviderChips.map((c) {
+              final (alias, icon, _) = c;
+              return DropdownMenuItem<String>(
+                value: alias,
+                child: Row(
+                  children: [
+                    Icon(icon, size: 16, color: Colors.white70),
+                    const SizedBox(width: 8),
+                    Text(alias, style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+              );
             }).toList(),
+            onChanged: (val) {
+              if (val != null) _applyPreset(val);
+            },
           ),
           const SizedBox(height: 16),
           _field(_aiBaseUrlController, 'Base URL',
@@ -477,71 +651,105 @@ class _SettingsScreenState extends State<SettingsScreen>
               onChanged: (v) =>
                   vm.setAiEngine(vm.aiEngine.copyWith(apiKey: v))),
           const SizedBox(height: 12),
-          _field(_aiModelController, 'Model',
-              hint: 'model-name',
-              onChanged: (v) => vm.setAiEngine(vm.aiEngine.copyWith(model: v))),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            key: ValueKey('provider_alias_$_aiProviderAlias'),
-            initialValue: _aiProviderAlias,
-            decoration: const InputDecoration(
-              labelText: 'Provider Alias',
-              labelStyle: TextStyle(fontSize: 12, color: Colors.grey),
-              filled: true,
-              fillColor: AppTheme.surface,
-            ),
-            dropdownColor: AppTheme.surfaceElevated,
-            style: const TextStyle(color: Colors.white, fontSize: 13),
-            items: _aiProviderChips.map((c) {
-              final (alias, _, _) = c;
-              return DropdownMenuItem<String>(value: alias, child: Text(alias));
-            }).toList(),
-            onChanged: (val) {
-              if (val != null) _applyPreset(val);
-            },
-          ),
+          if (_modelsLoading)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: const Row(
+                children: [
+                  SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.cyan),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Loading models...',
+                    style: TextStyle(fontSize: 12, color: Colors.white54),
+                  ),
+                ],
+              ),
+            )
+          else if (_availableModels.isNotEmpty)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DropdownButtonFormField<String>(
+                  key: ValueKey('model_dropdown_${_aiModelController.text}'),
+                  initialValue: _aiModelController.text.isNotEmpty &&
+                          _availableModels.contains(_aiModelController.text)
+                      ? _aiModelController.text
+                      : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Model',
+                    labelStyle: TextStyle(fontSize: 12, color: Colors.grey),
+                    filled: true,
+                    fillColor: AppTheme.surface,
+                  ),
+                  dropdownColor: AppTheme.surfaceElevated,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  items: [
+                    ..._availableModels.map((m) => DropdownMenuItem<String>(
+                          value: m,
+                          child: Text(m, style: const TextStyle(fontSize: 12)),
+                        )),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      _aiModelController.text = val;
+                      vm.setAiEngine(vm.aiEngine.copyWith(model: val));
+                    }
+                  },
+                ),
+                const SizedBox(height: 6),
+                TextButton.icon(
+                  onPressed: () => _fetchModels(_aiBaseUrlController.text, _aiApiKeyController.text),
+                  icon: const Icon(Icons.refresh, size: 14),
+                  label: const Text('Refresh models', style: TextStyle(fontSize: 11)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.cyan,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            )
+          else
+            _field(_aiModelController, 'Model',
+                hint: 'No models found — type manually',
+                onChanged: (v) => vm.setAiEngine(vm.aiEngine.copyWith(model: v))),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: AppTheme.primary.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white12),
+              border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.check_circle,
-                    color: Color(0xFF00D4AA), size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  'Active: $_aiProviderAlias',
-                  style:
-                      const TextStyle(fontSize: 12, color: Color(0xFF00D4AA)),
+                const Icon(Icons.link, size: 14, color: AppTheme.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _aiBaseUrlController.text.isNotEmpty
+                        ? Uri.tryParse(_aiBaseUrlController.text)?.host ?? _aiBaseUrlController.text
+                        : 'No endpoint configured',
+                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _providerChip(String alias, IconData icon, Color color) {
-    final isActive = _aiProviderAlias == alias;
-    return ActionChip(
-      avatar: Icon(icon, size: 16, color: isActive ? Colors.white : color),
-      label: Text(
-        alias,
-        style: TextStyle(
-          fontSize: 11,
-          color: isActive ? Colors.white : Colors.white70,
-        ),
-      ),
-      backgroundColor: isActive
-          ? color.withValues(alpha: 0.3)
-          : Colors.white.withValues(alpha: 0.08),
-      side: BorderSide(color: isActive ? color : Colors.white12),
-      onPressed: () => _applyPreset(alias),
     );
   }
 
@@ -658,6 +866,90 @@ class _SettingsScreenState extends State<SettingsScreen>
 
           // ── Permissions List ──
           _buildPermissionsList(dc),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  //  PC REMOTE CONTROL SECTION (desktop only)
+  // ─────────────────────────────────────────────────────────────────
+
+  Widget _buildPcControlSettings(SettingsViewModel vm) {
+    final dc = vm.deviceControl;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceElevated,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Remote Control Toggle ──
+          _toggleTile('$_platformLabel Remote Control', dc.pcEnabled,
+              (v) => vm.setDeviceControl(dc.copyWith(pcEnabled: v))),
+          const SizedBox(height: 16),
+
+          // ── SSH Host ──
+          _field(_pcSshHostController, 'SSH Host (empty = local)',
+              hint: '127.0.0.1',
+              onChanged: (v) =>
+                  vm.setDeviceControl(dc.copyWith(pcSshHost: v))),
+          const SizedBox(height: 12),
+
+          // ── SSH User + Port row ──
+          Row(
+            children: [
+              Expanded(
+                child: _field(_pcSshUserController, 'SSH User',
+                    hint: 'username',
+                    onChanged: (v) =>
+                        vm.setDeviceControl(dc.copyWith(pcSshUser: v))),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 80,
+                child: _field(_pcSshPortController, 'Port',
+                    hint: '22',
+                    onChanged: (v) =>
+                        vm.setDeviceControl(dc.copyWith(pcSshPort: v))),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // ── Platform info badge ──
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.cyan.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                  color: AppTheme.cyan.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_platformIcon,
+                    style: const TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '$_platformLabel control ready. '
+                    'Say "Open YouTube" and similar commands will execute '
+                    'natively on this $_platformLabel machine.',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1171,6 +1463,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     _workspaceController.dispose();
     _adbAddressController.dispose();
     _adbPortController.dispose();
+    _pcSshHostController.dispose();
+    _pcSshUserController.dispose();
+    _pcSshPortController.dispose();
     super.dispose();
   }
 }

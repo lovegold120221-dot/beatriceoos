@@ -24,12 +24,9 @@ import { LiveConnectConfig, Modality, LiveServerToolCall } from '@google/genai';
 import { AudioStreamer } from '../../lib/audio-streamer';
 import { audioContext } from '../../lib/utils';
 import VolMeterWorket from '../../lib/worklets/vol-meter';
-import { useLogStore, useSettings } from '@/lib/state';
-import {
-  classifyAndBuildTask,
-  runStructuredTask,
-  formatResultAsSpeech,
-} from '../../lib/private-agent';
+import { useLogStore, useSettings, useMobileUseAi } from '@/lib/state';
+import { routeDeviceRequest } from '../../lib/device-router';
+import type { LlmConfig } from '../../lib/private-agent';
 
 export type UseLiveApiResults = {
   client: GenAILiveClient;
@@ -165,51 +162,30 @@ export function useLiveApi({
           isFinal: true,
         });
 
-        if (fc.name === 'execute_device_task') {
+        if (fc.name === 'device_control') {
           const request = fc.args.request as string;
-          const confirmed = fc.args.confirmed === true;
 
           try {
-            // 1. Classify the request and build a structured task.
-            const { task, classification } = await classifyAndBuildTask(request, apiKey);
+            // Build the LLM config from the user's configured AI provider.
+            const { aiBaseUrl, aiApiKey, aiModel } = useMobileUseAi.getState();
+            const deviceLlm: LlmConfig = {
+              apiKey: aiApiKey || apiKey,
+              baseUrl: aiBaseUrl || undefined,
+              model: aiModel || undefined,
+            };
 
-            // 2. If the task is high-risk and not yet confirmed, return the
-            //    confirmation prompt as the tool response so Beatrice speaks
-            //    it and waits for the user to confirm verbally. The model
-            //    will re-call this tool with confirmed=true after consent.
-            if (task.requiresConfirmation && !confirmed) {
-              functionResponses.push({
-                id: fc.id,
-                name: fc.name,
-                response: {
-                  requiresConfirmation: true,
-                  classification: classification.classification,
-                  confirmationPrompt: task.confirmationMessage,
-                  instruction:
-                    'Ask the user for confirmation using the confirmationPrompt. ' +
-                    'If they agree, call execute_device_task again with the same request and confirmed=true. ' +
-                    'If they decline, do not call the tool again.',
-                },
-              });
-              continue;
-            }
-
-            // 3. Execute the structured task via PrivateAgent.
-            const result = await runStructuredTask(task, { apiKey });
-
-            // 4. Format the result into natural speech for Beatrice.
-            const speech = formatResultAsSpeech(result);
+            // Route the request through the device router.
+            // The router sends it to the configured AI provider, executes
+            // the action on the bridge, and returns a natural result.
+            const routerResult = await routeDeviceRequest(request, deviceLlm);
 
             functionResponses.push({
               id: fc.id,
               name: fc.name,
               response: {
-                result: speech,
-                completionStatus: result.completionStatus,
-                verificationStatus: result.verificationStatus,
-                verified: result.verificationStatus === 'verified',
-                importantObservations: result.importantObservations,
-                stepsTaken: result.stepsTaken,
+                result: routerResult.result || (routerResult.success ? 'Done.' : ''),
+                success: routerResult.success,
+                error: routerResult.error,
               },
             });
           } catch (err) {
@@ -217,19 +193,18 @@ export function useLiveApi({
               id: fc.id,
               name: fc.name,
               response: {
-                error:
-                  err instanceof Error
-                    ? err.message
-                    : 'PrivateAgent execution failed unexpectedly.',
+                result: '',
+                success: false,
+                error: err instanceof Error ? err.message : 'Device control failed.',
               },
             });
           }
         } else {
-          // Default behavior for other tools
+          // Default for any other tools
           functionResponses.push({
             id: fc.id,
             name: fc.name,
-            response: { result: 'ok' }, // simple, hard-coded function response
+            response: { result: 'ok' },
           });
         }
       }
